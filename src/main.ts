@@ -650,9 +650,11 @@ task(
   async function processIssue(payload: IssuePayload) {
     const { title, body, issueId, linearUserId } = payload;
     console.log(`[DOC-FIX] Processing issue ${issueId}: "${title}"`);
+    console.log(`[DOC-FIX] Body received: ${JSON.stringify(body)}`);
 
     // 1. Parse issue body for repo, file, and fix description
     const parsed = parseIssueBody(body);
+    console.log(`[DOC-FIX] Parsed fields:`, JSON.stringify(parsed));
 
     if (!parsed.owner || !parsed.repo || !parsed.filePath || !parsed.fixDescription) {
       const missing = [
