@@ -712,20 +712,24 @@ task(
       if (isAuthError(err)) {
         console.log(`[DOC-FIX] GitHub not connected for user ${linearUserId} — sending auth prompt`);
         const authBaseUrl = process.env.AUTH_BASE_URL ?? "http://localhost:3002";
-        const authLink = await getAuthLink(
-          linearUserId,
-          "github",
-          `${authBaseUrl}/callback?userId=${encodeURIComponent(linearUserId)}`,
-        );
-        await postServiceComment(
-          issueId,
-          `👋 To process this doc fix automatically, I need access to your GitHub account.\n\n` +
-          `**[Connect GitHub →](${authLink})**\n\n` +
-          `Once connected, edit or re-open this issue to retry.`,
-        );
+
+        let comment = `👋 To process this doc fix automatically, I need access to your GitHub account.\n\nOnce connected, edit or re-open this issue to retry.`;
+
+        try {
+          const authLink = await getAuthLink(
+            linearUserId,
+            "github",
+            `${authBaseUrl}/callback?userId=${encodeURIComponent(linearUserId)}`,
+          );
+          comment = `👋 To process this doc fix automatically, I need access to your GitHub account.\n\n**[Connect GitHub →](${authLink})**\n\nOnce connected, edit or re-open this issue to retry.`;
+        } catch (authLinkErr) {
+          console.error(`[DOC-FIX] Could not generate auth link: ${authLinkErr}`);
+        }
+
+        await postServiceComment(issueId, comment);
         return { success: false, reason: "github_auth_required" };
       }
-      throw err;
+      throw `processIssue failed: ${err instanceof Error ? err.message : String(err)}`;
     }
 
     // 6. Comment on Linear issue with PR link
