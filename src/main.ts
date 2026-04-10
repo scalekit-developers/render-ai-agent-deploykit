@@ -2,7 +2,7 @@ import "dotenv/config";
 import { task } from "@renderinc/sdk/workflows";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/resources/chat/completions";
-import { githubTool, linearTool } from "./scalekit.js";
+import { githubTool, linearTool, getAuthLink } from "./scalekit.js";
 
 const retry = {
   maxRetries: 3,
@@ -388,6 +388,44 @@ function parseIssueBody(body: string): Partial<ParsedIssue> {
   };
 }
 
+// ---- Doc-Fix Helpers ----
+
+/** Post a comment using the service LINEAR_API_KEY — no user OAuth required */
+async function postServiceComment(issueId: string, body: string): Promise<void> {
+  const apiKey = process.env.LINEAR_API_KEY;
+  if (!apiKey) {
+    console.error("[LINEAR] LINEAR_API_KEY not set — cannot post service comment");
+    return;
+  }
+  try {
+    const res = await fetch("https://api.linear.app/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": apiKey },
+      body: JSON.stringify({
+        query: `mutation CommentCreate($issueId: String!, $body: String!) {
+          commentCreate(input: { issueId: $issueId, body: $body }) { success }
+        }`,
+        variables: { issueId, body },
+      }),
+    });
+    if (!res.ok) console.error(`[LINEAR] Service comment failed: ${res.statusText}`);
+  } catch (err) {
+    console.error("[LINEAR] Service comment error:", err);
+  }
+}
+
+/** Detect Scalekit "no connected account" errors */
+function isAuthError(err: unknown): boolean {
+  const s = String(err).toLowerCase();
+  return (
+    s.includes("connected account") ||
+    s.includes("not found") ||
+    s.includes("unauthorized") ||
+    s.includes("no active") ||
+    s.includes("unauthenticated")
+  );
+}
+
 // ---- Doc-Fix Tasks ----
 
 const commentOnLinearIssue = task(
@@ -630,64 +668,76 @@ task(
         .filter(Boolean)
         .join(", ");
 
-      await commentOnLinearIssue(
+      await postServiceComment(
         issueId,
         `I couldn't process this issue automatically. Missing fields: ${missing}\n\n` +
         `Please format your issue like:\n\`\`\`\n` +
         `**Docs Repo:** https://github.com/org/repo\n` +
         `**File:** docs/getting-started/quickstart.md\n` +
         `**Fix:** Describe what needs to change\n\`\`\``,
-        linearUserId,
       );
       return { success: false, reason: "Missing required fields in issue body" };
     }
 
     const { owner, repo, filePath, fixDescription } = parsed as ParsedIssue;
 
-    // 2. Validate it's actually a docs repo
-    const validation = await validateDocsRepo(owner, repo, linearUserId);
-    if (!validation.valid) {
-      await commentOnLinearIssue(issueId, `⚠️ ${validation.reason}`, linearUserId);
-      return { success: false, reason: validation.reason };
-    }
-
-    // 3. Fetch the docs page
-    let pageContent: string;
+    // 2–5. Run GitHub-dependent steps — catch auth errors and prompt user to connect
+    let prUrl: string;
     try {
-      pageContent = await fetchDocsPage(owner, repo, filePath, linearUserId);
+      // 2. Validate it's actually a docs repo
+      const validation = await validateDocsRepo(owner, repo, linearUserId);
+      if (!validation.valid) {
+        await postServiceComment(issueId, `⚠️ ${validation.reason}`);
+        return { success: false, reason: validation.reason };
+      }
+
+      // 3. Fetch the docs page
+      let pageContent: string;
+      try {
+        pageContent = await fetchDocsPage(owner, repo, filePath, linearUserId);
+      } catch (err) {
+        await postServiceComment(
+          issueId,
+          `❌ Couldn't fetch \`${filePath}\` from \`${owner}/${repo}\`. ` +
+          `Please check the file path is correct.\n\nError: ${String(err)}`,
+        );
+        return { success: false, reason: String(err) };
+      }
+
+      // 4. Generate the fix
+      const { fixedContent, summary } = await generateDocFix(pageContent, fixDescription);
+
+      // 5. Create PR
+      ({ prUrl } = await createGitHubPR(
+        fixedContent, owner, repo, filePath, issueId, title, summary, linearUserId,
+      ));
     } catch (err) {
-      await commentOnLinearIssue(
-        issueId,
-        `❌ Couldn't fetch \`${filePath}\` from \`${owner}/${repo}\`. ` +
-        `Please check the file path is correct.\n\nError: ${String(err)}`,
-        linearUserId,
-      );
-      return { success: false, reason: String(err) };
+      if (isAuthError(err)) {
+        console.log(`[DOC-FIX] GitHub not connected for user ${linearUserId} — sending auth prompt`);
+        const authBaseUrl = process.env.AUTH_BASE_URL ?? "http://localhost:3002";
+        const authLink = await getAuthLink(
+          linearUserId,
+          "github",
+          `${authBaseUrl}/callback?userId=${encodeURIComponent(linearUserId)}`,
+        );
+        await postServiceComment(
+          issueId,
+          `👋 To process this doc fix automatically, I need access to your GitHub account.\n\n` +
+          `**[Connect GitHub →](${authLink})**\n\n` +
+          `Once connected, edit or re-open this issue to retry.`,
+        );
+        return { success: false, reason: "github_auth_required" };
+      }
+      throw err;
     }
-
-    // 4. Generate the fix
-    const { fixedContent, summary } = await generateDocFix(pageContent, fixDescription);
-
-    // 5. Create PR
-    const { prUrl } = await createGitHubPR(
-      fixedContent,
-      owner,
-      repo,
-      filePath,
-      issueId,
-      title,
-      summary,
-      linearUserId,
-    );
 
     // 6. Comment on Linear issue with PR link
-    await commentOnLinearIssue(
+    await postServiceComment(
       issueId,
-      `✅ PR raised: ${prUrl}\n\n${summary}\n\nReady for your review.`,
-      linearUserId,
+      `✅ PR raised: ${prUrl}\n\nReady for your review.`,
     );
 
     console.log(`[DOC-FIX] Done. PR: ${prUrl}`);
-    return { success: true, prUrl, summary };
+    return { success: true, prUrl };
   },
 );
