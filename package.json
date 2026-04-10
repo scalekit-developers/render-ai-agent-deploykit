@@ -6,14 +6,23 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
-    "dev": "tsx src/main.ts"
+    "start:webhook": "node dist/webhook.js",
+    "start:auth": "node dist/auth-setup.js",
+    "dev": "tsx src/main.ts",
+    "dev:webhook": "tsx src/webhook.ts",
+    "dev:auth": "tsx src/auth-setup.ts"
   },
   "dependencies": {
+    "@linear/sdk": "^81.0.0",
+    "@octokit/rest": "^22.0.1",
     "@renderinc/sdk": "latest",
+    "@scalekit-sdk/node": "^2.5.1",
     "dotenv": "^16.4.7",
+    "express": "^5.2.1",
     "openai": "^4.77.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
