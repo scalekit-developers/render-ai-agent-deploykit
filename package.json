@@ -11,8 +11,6 @@
     "dev:webhook": "tsx src/webhook.ts"
   },
   "dependencies": {
-    "@linear/sdk": "^81.0.0",
-    "@octokit/rest": "^22.0.1",
     "@renderinc/sdk": "latest",
     "@scalekit-sdk/node": "^2.5.1",
     "dotenv": "^16.4.7",

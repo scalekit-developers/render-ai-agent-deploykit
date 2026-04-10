@@ -423,25 +423,6 @@ function isAuthError(err: unknown): boolean {
 
 // ---- Doc-Fix Tasks ----
 
-const commentOnLinearIssue = task(
-  { name: "commentOnLinearIssue", retry },
-  async function commentOnLinearIssue(issueId: string, comment: string, linearUserId: string) {
-    console.log(`[LINEAR] Commenting on issue ${issueId}`);
-    await linearTool(linearUserId, "linear_graphql_query", {
-      query: `
-        mutation CommentCreate($issueId: String!, $body: String!) {
-          commentCreate(input: { issueId: $issueId, body: $body }) {
-            success
-            comment { id }
-          }
-        }
-      `,
-      variables: { issueId, body: comment },
-    });
-    console.log(`[LINEAR] Comment posted to ${issueId}`);
-  },
-);
-
 const validateDocsRepo = task(
   { name: "validateDocsRepo", retry },
   async function validateDocsRepo(
@@ -452,7 +433,6 @@ const validateDocsRepo = task(
     console.log(`[VALIDATE] Checking ${owner}/${repo}`);
 
     const repoData = await githubTool(linearUserId, "github_repo_get", { owner, repo }) as {
-      name?: string;
       description?: string;
       topics?: string[];
     };
@@ -711,7 +691,7 @@ task(
     } catch (err) {
       if (isAuthError(err)) {
         console.log(`[DOC-FIX] GitHub not connected for user ${linearUserId} — sending auth prompt`);
-        const authBaseUrl = process.env.AUTH_BASE_URL ?? "http://localhost:3002";
+        const authBaseUrl = process.env.AUTH_BASE_URL ?? "http://localhost:3001";
 
         let comment = `👋 To process this doc fix automatically, I need access to your GitHub account.\n\nOnce connected, edit or re-open this issue to retry.`;
 

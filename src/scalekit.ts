@@ -63,12 +63,16 @@ export async function linearTool(
   }
 }
 
-/** Get a magic link for a user to authorize a connector */
+/** Ensure a connected account exists, then get a magic auth link */
 export async function getAuthLink(
   identifier: string,
   connectionName: string,
   userVerifyUrl: string,
 ): Promise<string> {
+  await scalekit.actions.getOrCreateConnectedAccount({
+    connectionName,
+    identifier,
+  });
   const res = await scalekit.actions.getAuthorizationLink({
     connectionName,
     identifier,
