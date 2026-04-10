@@ -130,6 +130,7 @@ render workflows tasks get <task-id> --local
   ],
   "summary": "**PR #42 — Refactor authentication middleware**\nThis change restructures how the app handles user login and session management. It has generated significant discussion with 14 review comments, suggesting the team has been actively working through the design. The back-and-forth looks mostly resolved, so this one appears close to ready.\n\n**PR #38 — Add rate limiting to public endpoints**\nThis pull request introduces guardrails to prevent API abuse on the public-facing routes. There are 9 comments, mostly around configuration choices for the limits. It still seems to have a few open questions that need resolution before merging."
 }
+```
 
 ## Wiring to any trigger
 
