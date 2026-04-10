@@ -4,6 +4,12 @@ A Render Workflow that finds the 5 most-discussed open pull requests in any GitH
 
 The agent reads each PR's code diff and comment thread via Scalekit's GitHub connector (OAuth token vault), then calls Claude through LiteLLM to produce the summary.
 
+## Why this exists
+
+As AI agents raise the velocity of code changes, the volume of open PRs on any team is only going up. This workflow gives every team member a quick briefing before a standup — what's in review, how much discussion each PR has, and whether it looks close to merging or still needs work.
+
+Each team member runs the same workflow with their own `userId`. Scalekit's token vault handles per-user GitHub authentication — so the same deployed agent works for everyone on the team, each accessing GitHub as themselves.
+
 ## How it works
 
 1. Fetches all open PRs from the target repo via Scalekit's GitHub tool proxy
@@ -11,23 +17,33 @@ The agent reads each PR's code diff and comment thread via Scalekit's GitHub con
 3. For each of the top 5: fetches the raw diff and comment thread (in parallel)
 4. Calls Claude (via LiteLLM) to write one paragraph per PR in plain language
 
-## Prerequisites
+## Setup
 
-The GitHub account you want to act as must be connected to Scalekit before running the workflow. Do this once per user:
+### 1. Configure the Scalekit GitHub connector
+
+This is a one-time setup for your Scalekit environment. It creates the GitHub OAuth app that authenticates your team's GitHub accounts to the agent.
+
+1. Go to [app.scalekit.com](https://app.scalekit.com) → **Agent Auth** → **Connectors**
+2. Add a new connector and select **GitHub**
+3. Follow the setup steps — Scalekit creates and manages the GitHub OAuth app for you
+4. Note the **connection name** assigned (e.g. `github-qkHFhMip`) — set this as `GITHUB_CONNECTION_NAME` in your environment
+
+### 2. Connect each user's GitHub account
+
+Each team member needs to authorize the agent to act on their behalf. Run once per user:
 
 ```bash
 render workflows tasks start setupGitHubAuth --local --input='["your-user-id"]'
 ```
 
-This prints an `authLink`. Open it in your browser and authorize GitHub access. Scalekit stores the token — no callback server needed. Once authorized, you're ready to run `summarizePRs`.
+This prints an `authLink`. Open it in your browser and authorize GitHub access. Scalekit stores the token in its vault — no callback server needed. Once authorized, that `userId` can be passed to `summarizePRs` to act as that user.
 
-Alternatively, connect via the Scalekit Admin Portal: **Dashboard → Connections → GitHub → Generate portal link**.
+Alternatively, connect via the Scalekit Admin Portal: **Dashboard → Agent Auth → Generate portal link** and share it with the user.
 
 ## Trigger via CLI
 
 ```bash
 render workflows tasks start summarizePRs \
-  --local \
   --input='[{"userId":"alice","owner":"octocat","repo":"Hello-World"}]'
 ```
 
@@ -35,7 +51,7 @@ render workflows tasks start summarizePRs \
 
 | Input field | Description |
 |---|---|
-| `userId` | Your Scalekit connected account identifier (same value used in `setupGitHubAuth`) |
+| `userId` | The user's Scalekit connected account identifier (set during `setupGitHubAuth`) |
 | `owner` | GitHub repo owner (org or username) |
 | `repo` | GitHub repo name |
 
@@ -83,7 +99,7 @@ await client.startTask("your-workflow-slug/summarizePRs", {
 });
 ```
 
-You can also point a webhook endpoint directly at this — receive the event, extract the repo info, and call `startTask`.
+A common pattern: wire this to a Slack slash command or a standup bot — each team member passes their `userId` and gets back a summary of the repo's most active PRs.
 
 ## Environment variables
 
@@ -95,14 +111,15 @@ You can also point a webhook endpoint directly at this — receive the event, ex
 | `SCALEKIT_ENVIRONMENT_URL` | Yes | Your Scalekit environment URL |
 | `SCALEKIT_CLIENT_ID` | Yes | Scalekit app client ID |
 | `SCALEKIT_CLIENT_SECRET` | Yes | Scalekit app client secret |
-| `GITHUB_CONNECTION_NAME` | No | Scalekit GitHub connection name (default: `github-qkHFhMip`) |
+| `GITHUB_CONNECTION_NAME` | No | Scalekit GitHub connection name from the connector setup (default: `github-qkHFhMip`) |
 
 ## Deploy to Render
 
-1. Push this repo to GitHub (or GitLab / Bitbucket)
-2. In the [Render Dashboard](https://dashboard.render.com), click **New → Workflow**
-3. Connect your repo
-4. Set **Build command**: `npm install && npm run build`
-5. Set **Start command**: `node dist/main.js`
-6. Add the environment variables from the table above
-7. Deploy — the `summarizePRs` task will appear in the Render Dashboard and can be triggered from there or via CLI
+1. [Sign up on Render](https://render.com) if you haven't already
+2. Push this repo to GitHub (or GitLab / Bitbucket)
+3. In the Render Dashboard, click **New → Workflow**
+4. Connect your repo
+5. Set **Build command**: `npm install && npm run build`
+6. Set **Start command**: `node dist/main.js`
+7. Add the environment variables from the table above
+8. Deploy — the `summarizePRs` and `setupGitHubAuth` tasks will appear in the Render Dashboard and can be triggered from there or via CLI
