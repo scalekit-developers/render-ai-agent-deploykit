@@ -233,12 +233,11 @@ task(
       };
     }
 
-    const details: PRDetail[] = [];
-    for (const pr of topPRs) {
-      details.push(
-        await fetchPRDetails(userId, owner, repo, pr.number, pr.title, pr.comments + pr.review_comments),
-      );
-    }
+    const details = await Promise.all(
+      topPRs.map((pr) =>
+        fetchPRDetails(userId, owner, repo, pr.number, pr.title, pr.comments + pr.review_comments),
+      ),
+    );
 
     const summary = await generateSummary(details, owner, repo);
 
