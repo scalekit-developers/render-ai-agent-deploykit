@@ -8,34 +8,42 @@ The agent reads each PR's code diff and comment thread via Scalekit's GitHub con
 
 1. Fetches all open PRs from the target repo via Scalekit's GitHub tool proxy
 2. Ranks them by total comment count (issue comments + review comments)
-3. For each of the top 5: fetches the raw diff and comment thread
+3. For each of the top 5: fetches the raw diff and comment thread (in parallel)
 4. Calls Claude (via LiteLLM) to write one paragraph per PR in plain language
 
 ## Prerequisites
 
-Before running the workflow, the GitHub account you want to act as must be connected to Scalekit:
+The GitHub account you want to act as must be connected to Scalekit before running the workflow. Do this once per user:
 
-1. Go to your [Scalekit Dashboard](https://app.scalekit.com) → **Connections** → **GitHub**
-2. Generate an Admin Portal link and share it with the user, or connect the account directly
-3. Once connected, note the **identifier** you used — this is your `userId` when triggering the workflow
+```bash
+render workflows tasks start setupGitHubAuth --local --input='["your-user-id"]'
+```
 
-## Limitations
+This prints an `authLink`. Open it in your browser and authorize GitHub access. Scalekit stores the token — no callback server needed. Once authorized, you're ready to run `summarizePRs`.
 
-- Works with any repo the connected GitHub token has access to. Public repos work without any special token scopes. Private repos require a token with `repo` scope.
-- Ranks by comment count (issue comments + review comments). PRs with no comments are still included if there are fewer than 5 total open PRs.
+Alternatively, connect via the Scalekit Admin Portal: **Dashboard → Connections → GitHub → Generate portal link**.
 
 ## Trigger via CLI
 
 ```bash
 render workflows tasks start summarizePRs \
-  --input='{"userId":"alice","owner":"octocat","repo":"Hello-World"}'
+  --local \
+  --input='[{"userId":"alice","owner":"octocat","repo":"Hello-World"}]'
 ```
+
+> Note: the input must be a JSON array (`[{...}]`), not a bare object.
 
 | Input field | Description |
 |---|---|
-| `userId` | Your Scalekit connected account identifier |
+| `userId` | Your Scalekit connected account identifier (same value used in `setupGitHubAuth`) |
 | `owner` | GitHub repo owner (org or username) |
 | `repo` | GitHub repo name |
+
+## Limitations
+
+- Works with any repo the connected GitHub token has access to. Public repos work without any special token scopes. Private repos require a token with `repo` scope.
+- Ranks by comment count (issue comments + review comments). PRs with no comments are still included if there are fewer than 5 total open PRs.
+- Diffs are truncated to 3000 characters per PR to keep LLM context manageable.
 
 ## Local development
 
@@ -48,10 +56,13 @@ npm install
 # Terminal 1 — start the workflow server
 render workflows dev -- npm run dev
 
-# Terminal 2 — trigger the workflow
+# Terminal 2 — connect GitHub (once per user)
+render workflows tasks start setupGitHubAuth --local --input='["your-user-id"]'
+
+# Terminal 2 — trigger the summarizer
 render workflows tasks start summarizePRs \
   --local \
-  --input='{"userId":"alice","owner":"octocat","repo":"Hello-World"}'
+  --input='[{"userId":"your-user-id","owner":"octocat","repo":"Hello-World"}]'
 ```
 
 ## Wiring to any trigger
@@ -78,7 +89,7 @@ You can also point a webhook endpoint directly at this — receive the event, ex
 
 | Variable | Required | Notes |
 |---|---|---|
-| `LITELLM_API_KEY` | Yes | LiteLLM proxy API key |
+| `LITELLM_API_KEY` | Yes | LiteLLM proxy API key (also accepted as `OPENAI_API_KEY`) |
 | `LITELLM_BASE_URL` | Yes | LiteLLM proxy base URL |
 | `LITELLM_MODEL` | No | Defaults to `claude-haiku-4-5` |
 | `SCALEKIT_ENVIRONMENT_URL` | Yes | Your Scalekit environment URL |
