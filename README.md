@@ -109,12 +109,14 @@ render workflows tasks start summarizePRs \
 **Other useful Render CLI commands**
 
 ```bash
-# List all available tasks
+# List all available tasks (locally)
 render workflows tasks list --local
 
-# Check status of a running task
-render workflows tasks get <task-id> --local
+# List all available tasks (deployed)
+render workflows tasks list
 ```
+
+> The CLI does not have a `get` subcommand — to check the status or output of a running task, open the **Render Dashboard → your workflow service → Task runs**.
 
 ## Sample output
 
