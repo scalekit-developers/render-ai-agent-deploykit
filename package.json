@@ -1,24 +1,21 @@
 {
-  "name": "openai-agent-workflow",
+  "name": "render-pr-summarizer",
   "version": "1.0.0",
-  "description": "OpenAI Agent - AI customer support agent with Render Workflows (TypeScript)",
+  "description": "Render Workflow: summarize the most-discussed open PRs in any GitHub repo using Claude via LiteLLM",
   "type": "module",
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
-    "start:webhook": "node dist/webhook.js",
-    "dev": "tsx src/main.ts",
-    "dev:webhook": "tsx src/webhook.ts"
+    "dev": "tsx src/main.ts"
   },
   "dependencies": {
     "@renderinc/sdk": "latest",
     "@scalekit-sdk/node": "^2.5.1",
     "dotenv": "^16.4.7",
-    "express": "^5.2.1",
     "openai": "^4.77.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
+    "@types/node": "^20.0.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }

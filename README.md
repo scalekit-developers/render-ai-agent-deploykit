@@ -1,138 +1,97 @@
-# Render AI Agent Deploykit
+# Render PR Summarizer
 
-An AI-powered workflow kit that lets team members trigger automated tasks — doc updates, fixes, customer support — directly from the Render Dashboard, no developer intervention required.
+A Render Workflow that finds the 5 most-discussed open pull requests in any GitHub repository and generates a plain-language summary for each one — written for a team lead or manager who wants a quick read on where things stand.
 
-Built on [Render Workflows](https://render.com/docs/workflows) with an OpenAI-compatible client that routes through [Scalekit's LiteLLM proxy](https://llm.scalekit.cloud), so you can swap models without touching code.
+The agent reads each PR's code diff and comment thread via Scalekit's GitHub connector (OAuth token vault), then calls Claude through LiteLLM to produce the summary.
 
-## What it does
+## How it works
 
-Team members can trigger multi-turn AI agent runs from the Render Dashboard or CLI. The agent handles requests by calling tools, reasoning over results, and returning a final response — all orchestrated as durable, retriable tasks.
+1. Fetches all open PRs from the target repo via Scalekit's GitHub tool proxy
+2. Ranks them by total comment count (issue comments + review comments)
+3. For each of the top 5: fetches the raw diff and comment thread
+4. Calls Claude (via LiteLLM) to write one paragraph per PR in plain language
 
-The included example is a customer support agent. Swap in your own tools to handle doc updates, content fixes, data lookups, or any repeatable task you'd otherwise escalate to an engineer.
+## Prerequisites
 
-## Workflow structure
+Before running the workflow, the GitHub account you want to act as must be connected to Scalekit:
 
-```
-multiTurnConversation   ← trigger this with your input messages
-  └─ agentTurn          ← one turn per message
-       ├─ callLlmWithTools   ← LLM decides which tools to call
-       ├─ executeTool        ← runs the chosen tool
-       │    ├─ getOrderStatus
-       │    ├─ processRefund
-       │    └─ searchKnowledgeBase
-       └─ callLlmWithTools   ← LLM synthesizes tool results into a response
-```
+1. Go to your [Scalekit Dashboard](https://app.scalekit.com) → **Connections** → **GitHub**
+2. Generate an Admin Portal link and share it with the user, or connect the account directly
+3. Once connected, note the **identifier** you used — this is your `userId` when triggering the workflow
 
-Each box is an independent, retriable Render task. Failed steps retry automatically without re-running the whole conversation.
+## Limitations
 
-## For team members: triggering a run
+- Works with any repo the connected GitHub token has access to. Public repos work without any special token scopes. Private repos require a token with `repo` scope.
+- Ranks by comment count (issue comments + review comments). PRs with no comments are still included if there are fewer than 5 total open PRs.
 
-Once deployed, you don't need to touch code. Go to your Workflow service in the [Render Dashboard](https://dashboard.render.com), select a task, and provide your input.
-
-Or via the CLI:
+## Trigger via CLI
 
 ```bash
-render workflows tasks start multiTurnConversation \
-  --input='["What is the status of order ORD-001?", "Can I get a refund?"]'
+render workflows tasks start summarizePRs \
+  --input='{"userId":"alice","owner":"octocat","repo":"Hello-World"}'
 ```
 
-Each string in the array is one message in the conversation. The agent handles the rest.
+| Input field | Description |
+|---|---|
+| `userId` | Your Scalekit connected account identifier |
+| `owner` | GitHub repo owner (org or username) |
+| `repo` | GitHub repo name |
 
-## For developers: setup
-
-### Prerequisites
-
-- Node.js 18+
-- [Render CLI](https://render.com/docs/cli) v2.11.0+ (`brew install render`)
-- A Scalekit account with a LiteLLM API key
-
-### Environment variables
-
-Copy `.env.example` to `.env` and fill in:
-
-| Variable | Description |
-|----------|-------------|
-| `LITELLM_API_KEY` | Your Scalekit LiteLLM key (takes priority over `OPENAI_API_KEY`) |
-| `LITELLM_BASE_URL` | Proxy URL — defaults to `https://llm.scalekit.cloud` |
-| `LITELLM_MODEL` | Model to use — e.g. `claude-sonnet-4-6`, `claude-haiku-4-5` |
-| `OPENAI_API_KEY` | Fallback if not using LiteLLM |
-| `RENDER_API_KEY` | Required for cross-workflow task invocation |
-
-### Available models
-
-```
-claude-haiku-4-5
-claude-sonnet-4-6          ← recommended default
-claude-haiku-4-5-20251001
-claude-opus-4-6
-```
-
-### Run locally
+## Local development
 
 ```bash
+cp .env.example .env
+# Fill in your values in .env
+
 npm install
 
-# In one terminal — starts the local task server
+# Terminal 1 — start the workflow server
 render workflows dev -- npm run dev
 
-# In another terminal — list registered tasks
-render workflows tasks list --local
-
-# Trigger a test run
-render workflows tasks start multiTurnConversation \
+# Terminal 2 — trigger the workflow
+render workflows tasks start summarizePRs \
   --local \
-  --input='["What is the status of order ORD-001?"]'
+  --input='{"userId":"alice","owner":"octocat","repo":"Hello-World"}'
 ```
+
+## Wiring to any trigger
+
+The `summarizePRs` task is a standard Render Workflow task. You can trigger it from any system — a webhook, a cron job, a Slack bot, a GitHub Action, etc.
+
+Example: trigger from another service using the Render SDK:
+
+```typescript
+import { WorkflowsClient } from "@renderinc/sdk";
+
+const client = new WorkflowsClient({ apiKey: process.env.RENDER_API_KEY });
+
+await client.startTask("your-workflow-slug/summarizePRs", {
+  userId: "alice",
+  owner: "octocat",
+  repo: "Hello-World",
+});
+```
+
+You can also point a webhook endpoint directly at this — receive the event, extract the repo info, and call `startTask`.
+
+## Environment variables
+
+| Variable | Required | Notes |
+|---|---|---|
+| `LITELLM_API_KEY` | Yes | LiteLLM proxy API key |
+| `LITELLM_BASE_URL` | Yes | LiteLLM proxy base URL |
+| `LITELLM_MODEL` | No | Defaults to `claude-haiku-4-5` |
+| `SCALEKIT_ENVIRONMENT_URL` | Yes | Your Scalekit environment URL |
+| `SCALEKIT_CLIENT_ID` | Yes | Scalekit app client ID |
+| `SCALEKIT_CLIENT_SECRET` | Yes | Scalekit app client secret |
+| `GITHUB_CONNECTION_NAME` | No | Scalekit GitHub connection name (default: `github-qkHFhMip`) |
 
 ## Deploy to Render
 
-1. Push this repo to GitHub, GitLab, or Bitbucket
-2. In the [Render Dashboard](https://dashboard.render.com), click **New > Workflow**
-3. Link your repository
-4. Set the following:
-
-| Field | Value |
-|-------|-------|
-| **Build command** | `npm install && npm run build` |
-| **Start command** | `node dist/main.js` |
-
-5. Add your environment variables (see table above)
-6. Click **Deploy Workflow**
-
-Tasks appear in the Dashboard under your workflow service once the deploy succeeds.
-
-## Adding your own tools
-
-Tools live in `src/main.ts`. To add a new one:
-
-1. Define a task function wrapped in `task()`:
-
-```typescript
-const myTool = task(
-  { name: "myTool", retry },
-  function myTool(input: string) {
-    // your logic here
-    return { success: true, result: "..." };
-  }
-);
-```
-
-2. Add it to the `tools` array (the JSON Schema definition the LLM sees)
-3. Add a `case` for it in `executeTool`
-
-That's it. The agent will automatically use the tool when relevant.
-
-## Retry behavior
-
-| Task | Retries | Notes |
-|------|---------|-------|
-| `getOrderStatus` | 3 (2s, exponential) | Safe to retry |
-| `searchKnowledgeBase` | 3 (2s, exponential) | Safe to retry |
-| `callLlmWithTools` | 3 (2s, exponential) | Safe to retry |
-| `processRefund` | None | Non-idempotent — no retries |
-
-## Related
-
-- [Render Workflows docs](https://render.com/docs/workflows)
-- [LiteLLM proxy docs](https://docs.litellm.ai/docs/proxy/user_keys)
-- [Scalekit](https://scalekit.com)
+1. Push this repo to GitHub (or GitLab / Bitbucket)
+2. In the [Render Dashboard](https://dashboard.render.com), click **New → Workflow**
+3. Connect your repo
+4. Set **Build command**: `npm install && npm run build`
+5. Set **Start command**: `node dist/main.js`
+6. Add the environment variables from the table above
+7. Deploy — the `summarizePRs` task will appear in the Render Dashboard and can be triggered from there or via CLI

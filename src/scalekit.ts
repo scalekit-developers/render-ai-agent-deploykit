@@ -23,7 +23,12 @@ export const scalekit = new Proxy({} as ScalekitClient, {
   },
 });
 
-/** Call a pre-built GitHub tool via Scalekit on behalf of a user */
+const GITHUB_CONNECTION_NAME = process.env.GITHUB_CONNECTION_NAME ?? "github-qkHFhMip";
+
+/**
+ * Execute a pre-built GitHub tool via Scalekit on behalf of a user.
+ * Uses executeTool with connector: "github" (provider type).
+ */
 export async function githubTool(
   identifier: string,
   toolName: string,
@@ -33,7 +38,7 @@ export async function githubTool(
     const res = await scalekit.actions.executeTool({
       toolName,
       toolInput,
-      connector: "github",
+      connector: GITHUB_CONNECTION_NAME,
       identifier,
     });
     return res.data ?? {};
@@ -43,40 +48,55 @@ export async function githubTool(
   }
 }
 
-/** Call a pre-built Linear tool via Scalekit on behalf of a user */
-export async function linearTool(
-  identifier: string,
-  toolName: string,
-  toolInput: Record<string, unknown>,
-): Promise<JsonObject> {
-  try {
-    const res = await scalekit.actions.executeTool({
-      toolName,
-      toolInput,
-      connector: "linear",
-      identifier,
-    });
-    return res.data ?? {};
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw `Linear tool '${toolName}' failed: ${msg}`;
-  }
-}
-
-/** Ensure a connected account exists, then get a magic auth link */
-export async function getAuthLink(
-  identifier: string,
-  connectionName: string,
-  userVerifyUrl: string,
-): Promise<string> {
+/**
+ * Create or retrieve the connected account for a user, then return a GitHub
+ * OAuth authorization link. The user must click this link to grant access.
+ * After authorization Scalekit stores the token — no callback server needed.
+ */
+export async function getGitHubAuthLink(identifier: string): Promise<string> {
   await scalekit.actions.getOrCreateConnectedAccount({
-    connectionName,
+    connectionName: GITHUB_CONNECTION_NAME,
     identifier,
   });
   const res = await scalekit.actions.getAuthorizationLink({
-    connectionName,
+    connectionName: GITHUB_CONNECTION_NAME,
     identifier,
-    userVerifyUrl,
   });
   return res.link ?? "";
+}
+
+/**
+ * Make a raw authenticated GitHub API call via Scalekit's tool proxy.
+ * The user's OAuth token is injected from the vault automatically.
+ * Works for both public and private repos if the connected token has access.
+ */
+export async function githubRequest(
+  identifier: string,
+  path: string,
+  options: {
+    method?: string;
+    headers?: Record<string, string>;
+    queryParams?: Record<string, unknown>;
+  } = {},
+): Promise<unknown> {
+  try {
+    const res = await scalekit.actions.request({
+      connectionName: GITHUB_CONNECTION_NAME,
+      identifier,
+      path,
+      method: options.method ?? "GET",
+      headers: options.headers,
+      queryParams: options.queryParams,
+    });
+    return res.data;
+  } catch (err) {
+    console.error("[githubRequest] raw error:", err);
+    const msg =
+      err instanceof Error
+        ? err.message
+        : typeof err === "object" && err !== null
+          ? JSON.stringify(err, Object.getOwnPropertyNames(err as object))
+          : String(err);
+    throw new Error(`GitHub request to '${path}' failed: ${msg}`);
+  }
 }
