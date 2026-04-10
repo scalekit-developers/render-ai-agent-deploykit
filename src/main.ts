@@ -390,25 +390,20 @@ function parseIssueBody(body: string): Partial<ParsedIssue> {
 
 // ---- Doc-Fix Helpers ----
 
-/** Post a comment using the service LINEAR_API_KEY — no user OAuth required */
+/** Post a comment via Scalekit Linear connector using a pre-connected bot identifier */
 async function postServiceComment(issueId: string, body: string): Promise<void> {
-  const apiKey = process.env.LINEAR_API_KEY;
-  if (!apiKey) {
-    console.error("[LINEAR] LINEAR_API_KEY not set — cannot post service comment");
+  const botId = process.env.SCALEKIT_BOT_IDENTIFIER;
+  if (!botId) {
+    console.error("[LINEAR] SCALEKIT_BOT_IDENTIFIER not set — cannot post service comment");
     return;
   }
   try {
-    const res = await fetch("https://api.linear.app/graphql", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": apiKey },
-      body: JSON.stringify({
-        query: `mutation CommentCreate($issueId: String!, $body: String!) {
-          commentCreate(input: { issueId: $issueId, body: $body }) { success }
-        }`,
-        variables: { issueId, body },
-      }),
+    await linearTool(botId, "linear_graphql_query", {
+      query: `mutation CommentCreate($issueId: String!, $body: String!) {
+        commentCreate(input: { issueId: $issueId, body: $body }) { success }
+      }`,
+      variables: { issueId, body },
     });
-    if (!res.ok) console.error(`[LINEAR] Service comment failed: ${res.statusText}`);
   } catch (err) {
     console.error("[LINEAR] Service comment error:", err);
   }
