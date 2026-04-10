@@ -42,10 +42,22 @@ Alternatively, connect via the Scalekit Admin Portal: **Dashboard → Agent Auth
 
 ## Trigger via CLI
 
+**Locally (during development):**
+
+```bash
+render workflows tasks start summarizePRs \
+  --local \
+  --input='[{"userId":"alice","owner":"octocat","repo":"Hello-World"}]'
+```
+
+**Against the deployed workflow** (drop `--local`):
+
 ```bash
 render workflows tasks start summarizePRs \
   --input='[{"userId":"alice","owner":"octocat","repo":"Hello-World"}]'
 ```
+
+The Render CLI will prompt you to select the deployed workflow service if you have multiple services. You can also trigger tasks directly from the **Render Dashboard → your workflow service → Tasks**.
 
 > Note: the input must be a JSON array (`[{...}]`), not a bare object.
 
