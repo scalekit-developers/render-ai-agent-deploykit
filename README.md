@@ -67,19 +67,57 @@ render workflows tasks start summarizePRs \
 cp .env.example .env
 # Fill in your values in .env
 
-npm install
+npm install      # or: pnpm install
+```
 
-# Terminal 1 — start the workflow server
+**Terminal 1 — start the workflow server**
+
+```bash
 render workflows dev -- npm run dev
+# or with pnpm:
+render workflows dev -- pnpm dev
+```
 
-# Terminal 2 — connect GitHub (once per user)
+**Terminal 2 — connect GitHub (once per user)**
+
+```bash
 render workflows tasks start setupGitHubAuth --local --input='["your-user-id"]'
+```
 
-# Terminal 2 — trigger the summarizer
+Open the printed `authLink` in your browser to authorize GitHub access.
+
+**Terminal 2 — run the summarizer**
+
+```bash
 render workflows tasks start summarizePRs \
   --local \
   --input='[{"userId":"your-user-id","owner":"octocat","repo":"Hello-World"}]'
 ```
+
+**Other useful Render CLI commands**
+
+```bash
+# List all available tasks
+render workflows tasks list --local
+
+# Check status of a running task
+render workflows tasks get <task-id> --local
+```
+
+## Sample output
+
+```json
+{
+  "repository": "octocat/Hello-World",
+  "prsAnalyzed": [
+    "#42: Refactor authentication middleware",
+    "#38: Add rate limiting to public endpoints",
+    "#35: Update dependencies",
+    "#31: Fix memory leak in background worker",
+    "#28: Improve error messages"
+  ],
+  "summary": "**PR #42 — Refactor authentication middleware**\nThis change restructures how the app handles user login and session management. It has generated significant discussion with 14 review comments, suggesting the team has been actively working through the design. The back-and-forth looks mostly resolved, so this one appears close to ready.\n\n**PR #38 — Add rate limiting to public endpoints**\nThis pull request introduces guardrails to prevent API abuse on the public-facing routes. There are 9 comments, mostly around configuration choices for the limits. It still seems to have a few open questions that need resolution before merging."
+}
 
 ## Wiring to any trigger
 
