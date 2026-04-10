@@ -480,7 +480,7 @@ const fetchDocsPage = task(
     }) as { content?: string; encoding?: string };
 
     if (!fileData.content) {
-      throw new Error(`File not found or empty: ${filePath}`);
+      throw `File not found or empty: ${filePath}`;
     }
 
     const content = Buffer.from(fileData.content.replace(/\n/g, ""), "base64").toString("utf-8");
@@ -546,9 +546,12 @@ const createGitHubPR = task(
     console.log(`[GITHUB] Creating PR in ${owner}/${repo}`);
 
     // 1. Get default branch
-    const repoData = await githubTool(linearUserId, "github_repo_get", { owner, repo }) as {
-      default_branch: string;
-    };
+    let repoData: { default_branch: string };
+    try {
+      repoData = await githubTool(linearUserId, "github_repo_get", { owner, repo }) as { default_branch: string };
+    } catch (err) {
+      throw `createGitHubPR: could not access repo ${owner}/${repo} — ${err}`;
+    }
     const defaultBranch = repoData.default_branch ?? "main";
 
     // 2. Get branch SHA
