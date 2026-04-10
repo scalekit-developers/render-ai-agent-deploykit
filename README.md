@@ -50,14 +50,14 @@ render workflows tasks start summarizePRs \
   --input='[{"userId":"alice","owner":"octocat","repo":"Hello-World"}]'
 ```
 
-**Against the deployed workflow** (drop `--local`):
+**Against the deployed workflow** (drop `--local`, prefix with your workflow slug):
 
 ```bash
-render workflows tasks start summarizePRs \
+render workflows tasks start <your-workflow-slug>/summarizePRs \
   --input='[{"userId":"alice","owner":"octocat","repo":"Hello-World"}]'
 ```
 
-The Render CLI will prompt you to select the deployed workflow service if you have multiple services. You can also trigger tasks directly from the **Render Dashboard → your workflow service → Tasks**.
+The task slug must be in the form `workflow-slug/task-name`. Your workflow slug is the service name shown in the Render Dashboard (e.g. `render-ai-agent-deploykit-workflow/summarizePRs`). You can also trigger tasks directly from the **Render Dashboard → your workflow service → Tasks**.
 
 > Note: the input must be a JSON array (`[{...}]`), not a bare object.
 
@@ -143,7 +143,7 @@ import { WorkflowsClient } from "@renderinc/sdk";
 
 const client = new WorkflowsClient({ apiKey: process.env.RENDER_API_KEY });
 
-await client.startTask("your-workflow-slug/summarizePRs", {
+await client.startTask("<your-workflow-slug>/summarizePRs", {
   userId: "alice",
   owner: "octocat",
   repo: "Hello-World",
