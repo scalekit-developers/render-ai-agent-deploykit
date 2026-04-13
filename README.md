@@ -172,11 +172,6 @@ A common pattern: wire this to a Slack slash command or a standup bot — each t
 
 ## Deploy to Render
 
-1. [Sign up on Render](https://render.com) if you haven't already
-2. Push this repo to GitHub (or GitLab / Bitbucket)
-3. In the Render Dashboard, click **New → Workflow**
-4. Connect your repo
-5. Set **Build command**: `npm install && npm run build`
-6. Set **Start command**: `node dist/main.js`
-7. Add the environment variables from the table above
-8. Deploy — the `summarizePRs` and `setupGitHubAuth` tasks will appear in the Render Dashboard and can be triggered from there or via CLI
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/saif-at-scalekit/render-ai-agent-deploykit)
+
+Click the button above. Render reads `render.yaml` from the repo and prompts you to fill in the required environment variables (see the table above). The `summarizePRs` and `setupGitHubAuth` tasks will appear in the Render Dashboard once the deploy completes.
