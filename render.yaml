@@ -1,10 +1,12 @@
 services:
-  - type: worker
+  - type: web
     name: render-pr-summarizer
     runtime: node
     buildCommand: npm install && npm run build
     startCommand: node dist/main.js
     envVars:
+      - key: PORT
+        value: 3000
       - key: LITELLM_API_KEY
         sync: false
       - key: LITELLM_BASE_URL

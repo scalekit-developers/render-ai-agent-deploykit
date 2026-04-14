@@ -21,6 +21,17 @@ Each team member runs the same workflow with their own `userId`. Scalekit's toke
 3. For each of the top 5: fetches the raw diff and comment thread (in parallel)
 4. Calls Claude (via LiteLLM) to write one paragraph per PR in plain language
 
+## Web UI
+
+Once deployed (or running locally), the service exposes a web interface at its root URL (`http://localhost:3000` in development, or your Render service URL in production).
+
+The UI has two sections:
+
+1. **Connect GitHub** — enter a user ID to generate an OAuth authorization link. Open the link in a browser to grant GitHub access. Run once per user.
+2. **Summarize Pull Requests** — enter a user ID, GitHub owner, and repo name. The agent fetches the top 5 most-discussed open PRs and generates AI summaries (takes up to 2 minutes).
+
+The Render Workflow tasks (`setupGitHubAuth`, `summarizePRs`) still work via CLI and Dashboard as before — the web UI is an additional trigger.
+
 ## Setup
 
 ### 1. Configure the Scalekit GitHub connector
@@ -86,7 +97,7 @@ cp .env.example .env
 npm install      # or: pnpm install
 ```
 
-**Terminal 1 — start the workflow server**
+**Terminal 1 — start the workflow server + web UI**
 
 ```bash
 render workflows dev -- npm run dev
@@ -94,7 +105,9 @@ render workflows dev -- npm run dev
 render workflows dev -- pnpm dev
 ```
 
-**Terminal 2 — connect GitHub (once per user)**
+Open `http://localhost:3000` in your browser to use the web UI.
+
+**Terminal 2 — connect GitHub (once per user, or use the web UI)**
 
 ```bash
 render workflows tasks start setupGitHubAuth --local --input='["your-user-id"]'
@@ -162,6 +175,7 @@ A common pattern: wire this to a Slack slash command or a standup bot — each t
 
 | Variable | Required | Notes |
 |---|---|---|
+| `PORT` | No | Web server port (default: `3000`) |
 | `LITELLM_API_KEY` | Yes | LiteLLM proxy API key (also accepted as `OPENAI_API_KEY`) |
 | `LITELLM_BASE_URL` | Yes | LiteLLM proxy base URL |
 | `LITELLM_MODEL` | No | Defaults to `claude-haiku-4-5` |
