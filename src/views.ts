@@ -18,6 +18,13 @@ export function renderHomePage(): string {
     header { margin-bottom: 2rem; }
     header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 0.4rem; }
     header p { color: #555; font-size: 0.95rem; }
+    .header-links {
+      margin-top: 0.75rem;
+      font-size: 0.88rem;
+    }
+    .header-links a { color: #1a6ef0; font-weight: 500; }
+    .header-links a:hover { text-decoration: underline; }
+    .header-links-sep { color: #aaa; margin: 0 0.4rem; user-select: none; }
     .card {
       background: #fff;
       border: 1px solid #e0e0e0;
@@ -27,6 +34,13 @@ export function renderHomePage(): string {
     }
     .card h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.3rem; }
     .card .subtitle { color: #666; font-size: 0.85rem; margin-bottom: 1.2rem; }
+    .card .subtitle code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.82rem;
+      background: #f0f0f0;
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+    }
     .field { margin-bottom: 1rem; }
     label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.3rem; color: #333; }
     input[type="text"] {
@@ -109,6 +123,68 @@ export function renderHomePage(): string {
       font-size: 0.8rem;
       margin: 0.15rem 0.2rem 0.15rem 0;
     }
+    .help-list {
+      font-size: 0.85rem;
+      color: #444;
+      line-height: 1.55;
+      padding-left: 1.15rem;
+      margin-top: 0.25rem;
+    }
+    .help-list li { margin-bottom: 0.65rem; }
+    .help-list li:last-child { margin-bottom: 0; }
+    .help-list code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.8rem;
+      background: #f0f0f0;
+      padding: 0.12rem 0.35rem;
+      border-radius: 4px;
+    }
+    .help-list a { color: #1a6ef0; }
+    details.card-collapsible {
+      padding: 0;
+      overflow: hidden;
+    }
+    details.card-collapsible > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 1.25rem 1.5rem;
+      user-select: none;
+    }
+    details.card-collapsible > summary::-webkit-details-marker { display: none; }
+    details.card-collapsible > summary::marker { content: ''; }
+    .collapsible-summary-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      min-width: 0;
+    }
+    .collapsible-summary-text strong {
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+    .collapsible-summary-hint {
+      font-size: 0.82rem;
+      color: #666;
+      font-weight: 400;
+    }
+    .collapsible-chevron {
+      flex-shrink: 0;
+      font-size: 0.65rem;
+      color: #666;
+      transition: transform 0.2s ease;
+    }
+    details.card-collapsible[open] .collapsible-chevron {
+      transform: rotate(90deg);
+    }
+    .collapsible-body {
+      padding: 0 1.5rem 1.5rem;
+      border-top: 1px solid #eee;
+    }
+    .collapsible-body .subtitle { margin-top: 1rem; }
   </style>
 </head>
 <body>
@@ -116,7 +192,30 @@ export function renderHomePage(): string {
   <header>
     <h1>Render PR Summarizer</h1>
     <p>Summarize the most-discussed open pull requests in any GitHub repository using AI.</p>
+    <p class="header-links">
+      <a href="https://github.com/saif-at-scalekit/render-ai-agent-deploykit/blob/main/README.md" target="_blank" rel="noopener noreferrer">README on GitHub</a>
+      <span class="header-links-sep" aria-hidden="true">·</span>
+      <a href="https://docs.scalekit.com/cookbooks/render-github-pr-summarizer/" target="_blank" rel="noopener noreferrer">Scalekit cookbook</a>
+    </p>
   </header>
+
+  <details class="card card-collapsible">
+    <summary>
+      <span class="collapsible-summary-text">
+        <strong>Environment variables</strong>
+        <span class="collapsible-summary-hint">Scalekit, LiteLLM &amp; Blueprint — click to expand</span>
+      </span>
+      <span class="collapsible-chevron" aria-hidden="true">&#9654;</span>
+    </summary>
+    <div class="collapsible-body">
+      <p class="subtitle">The API needs Scalekit and LiteLLM settings. Configure them on Render (or in a local <code>.env</code> for development).</p>
+      <ul class="help-list">
+        <li><strong>Where to find values:</strong> In the <a href="https://app.scalekit.com" target="_blank" rel="noopener noreferrer">Scalekit dashboard</a>, use your app credentials for <code>SCALEKIT_ENVIRONMENT_URL</code>, <code>SCALEKIT_CLIENT_ID</code>, and <code>SCALEKIT_CLIENT_SECRET</code>. Under <strong>Agent Auth → Connectors</strong>, copy the GitHub connection name into <code>GITHUB_CONNECTION_NAME</code>. Set <code>LITELLM_API_KEY</code> and <code>LITELLM_BASE_URL</code> from your LiteLLM proxy (the repo’s <code>.env.example</code> shows the expected shape).</li>
+        <li><strong>On Render:</strong> <a href="https://dashboard.render.com" target="_blank" rel="noopener noreferrer">Dashboard</a> → your web service → <strong>Environment</strong> → add or edit each variable.</li>
+        <li><strong>Blueprint (<code>render.yaml</code>):</strong> Variables are listed under <code>envVars</code>. Any entry with <code>sync: false</code> is a secret you enter at deploy time or in <strong>Environment</strong>; it is not stored in the repository.</li>
+      </ul>
+    </div>
+  </details>
 
   <!-- Step 1: Auth Setup -->
   <div class="card">

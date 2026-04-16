@@ -2,7 +2,7 @@
 
 ## Render PR Summarizer
 
-> 📖 **Check out the full Step-by-Step Guide:** [Deploy GitHub PR Summarizer to Render](https://cookbook-render-pr-summarizer--scalekit-starlight.netlify.app/cookbooks/render-github-pr-summarizer/)
+> 📖 **Check out the full Step-by-Step Guide:** [Deploy GitHub PR Summarizer to Render](https://docs.scalekit.com/cookbooks/render-github-pr-summarizer/)
 
 A Render Workflow that finds the 5 most-discussed open pull requests in any GitHub repository and generates a plain-language summary for each one — written for a team lead or manager who wants a quick read on where things stand.
 
