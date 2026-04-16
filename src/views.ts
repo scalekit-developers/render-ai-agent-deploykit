@@ -141,11 +141,11 @@ export function renderHomePage(): string {
     <div class="row">
       <div class="field">
         <label for="sum-owner">Owner</label>
-        <input type="text" id="sum-owner" placeholder="e.g. vercel" autocomplete="off">
+        <input type="text" id="sum-owner" placeholder="e.g. render-oss" autocomplete="off">
       </div>
       <div class="field">
         <label for="sum-repo">Repository</label>
-        <input type="text" id="sum-repo" placeholder="e.g. next.js" autocomplete="off">
+        <input type="text" id="sum-repo" placeholder="e.g. sdk" autocomplete="off">
       </div>
     </div>
     <button id="sum-btn" onclick="summarize()">Summarize PRs</button>
