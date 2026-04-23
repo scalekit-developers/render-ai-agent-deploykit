@@ -55,6 +55,8 @@ Generate `SESSION_SECRET` with `openssl rand -hex 32`.
 
 Set `PUBLIC_BASE_URL` to the public origin of the deployed service, for example `https://your-service.onrender.com`.
 
+If you deploy from the included `render.yaml`, Render auto-generates `SESSION_SECRET`. You still need to supply `PUBLIC_BASE_URL`.
+
 ## Scalekit connector setup
 
 Before using the deployed app:

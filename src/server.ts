@@ -12,11 +12,24 @@ import {
   isConnected,
 } from "./session.js";
 import { renderHomePage } from "./views.js";
+import type { Request } from "express";
 
-function getPublicBaseUrl(): string {
+function getConfiguredPublicBaseUrl(): string | null {
   const v = process.env.PUBLIC_BASE_URL;
-  if (!v) throw new Error("PUBLIC_BASE_URL is required (e.g. http://localhost:3000)");
-  return v.replace(/\/$/, "");
+  return v ? v.replace(/\/$/, "") : null;
+}
+
+function getRequestOrigin(req: Request): string {
+  const configured = getConfiguredPublicBaseUrl();
+  if (configured) return configured;
+
+  const protoHeader = req.get("x-forwarded-proto");
+  const proto = protoHeader?.split(",")[0]?.trim() || req.protocol || "http";
+  const host = req.get("x-forwarded-host") || req.get("host");
+  if (!host) {
+    throw new Error("Could not determine the public origin for this request");
+  }
+  return `${proto}://${host}`;
 }
 
 function getSingleQueryParam(value: unknown): string | null {
@@ -38,11 +51,11 @@ function formatSummarizeError(owner: string, repo: string, err: unknown): string
 
 export function startServer(): void {
   assertSessionSecretConfigured();
-  getPublicBaseUrl();
 
   const app = express();
   const PORT = parseInt(process.env.PORT ?? "3000", 10);
 
+  app.set("trust proxy", true);
   app.use(express.json());
 
   app.get("/health", (_req, res) => {
@@ -65,7 +78,7 @@ export function startServer(): void {
     const state = crypto.randomUUID();
     setPendingState(entry, state);
 
-    const userVerifyUrl = `${getPublicBaseUrl()}/user/verify`;
+    const userVerifyUrl = `${getRequestOrigin(req)}/user/verify`;
 
     try {
       const result = await setupGitHubAuthTask({ identifier, state, userVerifyUrl });

@@ -82,9 +82,12 @@ export function requireSession(req: Request, res: Response): Session {
   // The cookie payload is already a random opaque session id. HMAC signing is
   // enough to detect tampering; encrypting the cookie would not add meaningful
   // protection for this sample because there is no sensitive plaintext inside it.
+  const protoHeader = req.get("x-forwarded-proto");
+  const requestIsSecure = req.secure || protoHeader?.split(",")[0]?.trim() === "https";
   const secure =
     process.env.NODE_ENV === "production" ||
-    process.env.PUBLIC_BASE_URL?.startsWith("https://") === true;
+    process.env.PUBLIC_BASE_URL?.startsWith("https://") === true ||
+    requestIsSecure;
   const parts = [
     `${COOKIE_NAME}=${sign(sessionId)}`,
     "HttpOnly",

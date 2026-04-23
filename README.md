@@ -87,8 +87,9 @@ If the session has not connected GitHub yet, the server returns `401`.
 This sample uses the secure connected-account verification flow from Scalekit's docs.
 
 1. In the Scalekit Dashboard, go to **AgentKit > Settings > User verification** and set it to **Custom user verification**
-2. Keep `PUBLIC_BASE_URL` set to the exact origin where the app is running
-3. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link
+2. Set `PUBLIC_BASE_URL` if you want to pin the callback origin explicitly
+3. If `PUBLIC_BASE_URL` is unset, the app falls back to the incoming request origin
+4. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link when that variable is set
 
 ### 3. Configure local environment variables
 
@@ -102,7 +103,7 @@ Fill in `.env` with your Scalekit and LLM settings.
 Important variables:
 
 - `SESSION_SECRET`: generate with `openssl rand -hex 32`
-- `PUBLIC_BASE_URL`: set to `http://localhost:3000` locally or your public Render URL in production
+- `PUBLIC_BASE_URL`: optional override for the callback origin; set it to `http://localhost:3000` locally or your public Render URL in production if you want to pin the callback URL explicitly
 - `GITHUB_CONNECTION_NAME`: copy from the Scalekit dashboard
 
 ### 4. Run the app
@@ -131,7 +132,9 @@ Render reads `render.yaml` and creates a Node web service. Set the required secr
 - `SESSION_SECRET`
 - `PUBLIC_BASE_URL`
 
-Set `PUBLIC_BASE_URL` to the exact public URL of the deployed service, for example `https://your-service.onrender.com`.
+When `PUBLIC_BASE_URL` is set, use the exact public URL of the deployed service, for example `https://your-service.onrender.com`.
+
+If `PUBLIC_BASE_URL` is omitted, the app falls back to the incoming request origin for the OAuth callback URL. When you deploy from the included `render.yaml`, Render auto-generates `SESSION_SECRET` for you.
 
 ## Architecture
 
