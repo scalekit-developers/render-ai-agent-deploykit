@@ -60,7 +60,7 @@ Set `PUBLIC_BASE_URL` to the public origin of the deployed service, for example 
 Before using the deployed app:
 
 1. Create a GitHub connector in **Agent Auth > Connectors**
-2. Set **User Verification** to **Custom user verification**
+2. In the Scalekit Dashboard, go to **AgentKit > Settings > User verification** and set it to **Custom user verification**
 3. Set `PUBLIC_BASE_URL` to the exact origin where the app will run
 4. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link
 

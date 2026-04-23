@@ -86,7 +86,7 @@ If the session has not connected GitHub yet, the server returns `401`.
 
 This sample uses the secure connected-account verification flow from Scalekit's docs.
 
-1. In the same connector, set **Agent Auth > User Verification** to **Custom user verification**
+1. In the Scalekit Dashboard, go to **AgentKit > Settings > User verification** and set it to **Custom user verification**
 2. Keep `PUBLIC_BASE_URL` set to the exact origin where the app is running
 3. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link
 
