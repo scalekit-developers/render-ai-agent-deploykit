@@ -4,7 +4,7 @@
 
 A GitHub PR summarizer agent where every team member connects their own GitHub account once — Scalekit's token vault handles per-user OAuth so the same deployed service works for the whole team.
 
-The agent finds the five most-discussed open pull requests in any GitHub repository, reads each PR's diff and comment thread via Scalekit's GitHub connector, then calls Claude through LiteLLM to produce a plain-language summary for each one.
+The agent finds the five most-discussed open pull requests in any GitHub repository, reads each PR's diff and comment thread via Scalekit's GitHub connector, then calls an LLM through any OpenAI-compatible API to produce a plain-language summary for each one.
 
 ## Why this exists
 
@@ -19,7 +19,7 @@ Scalekit also provides the GitHub connector itself. Rather than calling the GitH
 1. Fetches all open PRs from the target repo via Scalekit's GitHub tool proxy
 2. Ranks them by total comment count (issue comments + review comments)
 3. For each of the top 5: fetches the raw diff and comment thread (in parallel)
-4. Calls Claude (via LiteLLM) to write one paragraph per PR in plain language
+4. Calls an LLM via any OpenAI-compatible API to write one paragraph per PR in plain language
 
 ## Web UI
 
@@ -132,7 +132,7 @@ Browser / HTTP client
 │  │   (runs in parallel)        │  │
 │  └─────────────────────────────┘  │
 │  ┌─────────────────────────────┐  │
-│  │  generateSummary task       │──┼──► LiteLLM ──► Claude
+│  │  generateSummary task       │──┼──► any OpenAI-compatible API
 │  └─────────────────────────────┘  │
 └───────────────────────────────────┘
         │
@@ -161,14 +161,27 @@ Browser / HTTP client
 - Ranks by comment count (issue comments + review comments). PRs with no comments are still included if there are fewer than 5 total open PRs.
 - Diffs are truncated to 3000 characters per PR to keep LLM context manageable.
 
+## LLM configuration
+
+The agent uses the `openai` npm package with a configurable `baseURL`, so it works with any OpenAI-compatible API:
+
+| Provider | `LITELLM_BASE_URL` | `LITELLM_MODEL` |
+|---|---|---|
+| OpenAI directly | _(omit — defaults to OpenAI)_ | `gpt-4o`, `gpt-4o-mini`, … |
+| LiteLLM proxy | your LiteLLM base URL | any model your proxy supports |
+| Azure OpenAI | your Azure endpoint | `gpt-4o`, … |
+| Ollama (local) | `http://localhost:11434/v1` | `llama3`, `mistral`, … |
+
+The env vars are named `LITELLM_*` by convention, but they map directly to the `openai` SDK's `apiKey` and `baseURL` options — no LiteLLM-specific code is involved.
+
 ## Environment variables
 
 | Variable | Required | Notes |
 |---|---|---|
 | `PORT` | No | Web server port (default: `3000`) |
-| `LITELLM_API_KEY` | Yes | LiteLLM proxy API key (also accepted as `OPENAI_API_KEY`) |
-| `LITELLM_BASE_URL` | Yes | LiteLLM proxy base URL |
-| `LITELLM_MODEL` | No | Defaults to `claude-haiku-4-5` |
+| `LITELLM_API_KEY` | Yes | API key for your LLM provider (also accepted as `OPENAI_API_KEY`) |
+| `LITELLM_BASE_URL` | No | Base URL of your LLM endpoint; omit to use OpenAI directly |
+| `LITELLM_MODEL` | No | Model name passed to the API (default: `claude-haiku-4-5`) |
 | `SCALEKIT_ENVIRONMENT_URL` | Yes | Your Scalekit environment URL |
 | `SCALEKIT_CLIENT_ID` | Yes | Scalekit app client ID |
 | `SCALEKIT_CLIENT_SECRET` | Yes | Scalekit app client secret |
