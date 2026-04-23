@@ -33,7 +33,8 @@ const GITHUB_CONNECTION_NAME = (() => {
 
 /**
  * Execute a pre-built GitHub tool via Scalekit on behalf of a user.
- * Uses executeTool with connector: "github" (provider type).
+ * Uses the configured GitHub connection name so Scalekit injects the
+ * connected account's OAuth token for this identifier.
  */
 export async function githubTool(
   identifier: string,
@@ -81,17 +82,15 @@ export async function getGitHubAuthLink(
 /**
  * Complete the user-verification step after OAuth callback.
  * Called from GET /user/verify with the auth_request_id Scalekit sends in the redirect.
- * Returns the URL to redirect the user to after successful verification.
  */
 export async function verifyUser(params: {
   authRequestId: string;
   identifier: string;
-}): Promise<string> {
-  const res = await scalekit.actions.verifyConnectedAccountUser({
+}): Promise<void> {
+  await scalekit.actions.verifyConnectedAccountUser({
     authRequestId: params.authRequestId,
     identifier: params.identifier,
   });
-  return res.postUserVerifyRedirectUrl ?? "/";
 }
 
 /**
