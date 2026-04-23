@@ -1,90 +1,76 @@
-# GitHub PR Summarizer with Render Workflows | Render
+# GitHub PR summarizer web service on Render
 
-## Why deploy a PR summarizer workflow on Render?
+## Why deploy this sample on Render?
 
-A PR summarizer workflow fetches the most-discussed open pull requests from any GitHub repository and produces a plain-language briefing for each one — ranked by review activity, written for managers and team leads who want a quick read before standup.
+This sample runs as a Node web service with an HTML UI and a secure GitHub connection flow. Each browser session connects its own GitHub account once, then reuses that connected token for later PR summary requests.
 
-**Scalekit is what makes this agent work for everyone, not just you.**
+Scalekit provides the GitHub connector, connected-account vault, and user verification flow. Render provides the hosting surface for the Express app and its task execution.
 
-Most GitHub agents are built for a single token — yours. Scalekit AgentKit turns this into a multi-user agent: any team member, or anyone on the internet, can connect their own GitHub account with one command. Scalekit vaults their OAuth token and injects it automatically at runtime. The deployed workflow is shared; the GitHub credentials are always personal. No shared API keys, no callback servers, no per-user infrastructure.
+## What makes this deployment safe for multiple users
 
-Scalekit also provides the GitHub connector itself. Rather than calling the GitHub API directly and handling auth headers, response shapes, and pagination yourself, the workflow calls Scalekit's pre-built GitHub tools by name (`github_pull_requests_list`). The connector handles token injection, normalizes responses into agent-ready formats, and exposes GitHub as clean, callable tools. Your agent code stays simple.
+The browser never sends a `userId`.
 
-Render Workflows handles the orchestration layer — parallel task execution, retries, and execution state. Configure environment variables and deploy.
+Instead, the server:
 
-## Architecture
+- mints a random opaque identifier for each session
+- stores that identifier in a server-side session record
+- sends only a signed, HTTP-only cookie to the browser
+- validates a one-time `state` during the OAuth callback
+- calls `verifyConnectedAccountUser` before using the connected token
 
+That prevents one browser session from pointing requests at another user's connected GitHub credentials.
+
+## Runtime flow
+
+```text
+Browser
+  │
+  ▼ GET /
+Express app on Render
+  │ set signed HTTP-only session cookie
+  ▼ POST /api/auth
+Scalekit creates auth link for session-bound identifier
+  │
+  ▼ GET /user/verify
+Express app validates state and calls verifyConnectedAccountUser
+  │
+  ▼ POST /api/summarize { owner, repo }
+Scalekit GitHub connector fetches PR data with the connected user's token
 ```
-CLI / Render Dashboard
-        │
-        ▼ trigger summarizePRs(userId, owner, repo)
-┌───────────────────────────────┐
-│     Render Workflow Worker     │
-│                               │
-│  ┌─────────────────────────┐  │
-│  │   fetchOpenPRs task     │──┼──► Scalekit AgentKit ──► GitHub API
-│  └─────────────────────────┘  │     (OAuth vault +
-│  ┌─────────────────────────┐  │      GitHub connector)
-│  │  fetchPRDetails task    │──┼──► GitHub API (diff + comments)
-│  │   (runs in parallel)    │  │
-│  └─────────────────────────┘  │
-│  ┌─────────────────────────┐  │
-│  │  generateSummary task   │──┼──► LiteLLM ──► Claude Haiku
-│  └─────────────────────────┘  │
-└───────────────────────────────┘
-        │
-        ▼ { repository, prsAnalyzed, summary }
-```
 
-## What you can build
+## Required environment variables
 
-After deploying, you'll have a working AI agent that fetches the five most-discussed open pull requests from any GitHub repository and writes a plain-language paragraph for each one — covering what the change does, how much review it has received, and whether it looks close to merging. Each team member runs the workflow with their own `userId`; Scalekit's AgentKit injects their personal GitHub OAuth token automatically, so the same deployed agent works for the whole team — or anyone outside it — without sharing credentials.
+- `PORT`
+- `LITELLM_API_KEY`
+- `LITELLM_BASE_URL`
+- `LITELLM_MODEL`
+- `SCALEKIT_ENVIRONMENT_URL`
+- `SCALEKIT_CLIENT_ID`
+- `SCALEKIT_CLIENT_SECRET`
+- `GITHUB_CONNECTION_NAME`
+- `SESSION_SECRET`
+- `PUBLIC_BASE_URL`
 
-## Key features
+Generate `SESSION_SECRET` with `openssl rand -hex 32`.
 
-- **Scalekit AgentKit — any user, zero OAuth infrastructure**: Any person can connect their GitHub account by running `setupGitHubAuth` once. Scalekit vaults their OAuth token and injects it at runtime on every subsequent call. The same deployed workflow serves your whole team, external contributors, or anyone on the internet — each acting as themselves in GitHub. No shared credentials, no callback server, no per-user code.
+Set `PUBLIC_BASE_URL` to the public origin of the deployed service, for example `https://your-service.onrender.com`.
 
-- **Scalekit GitHub Connector — tools your agent calls by name**: GitHub access goes through Scalekit's pre-built connector, not raw API calls. The connector exposes GitHub operations as named tools (`github_pull_requests_list`), handles token injection automatically, and normalizes responses into agent-ready shapes. Your workflow calls a tool name and gets clean data back — the connector handles auth, headers, and response parsing.
+## Scalekit connector setup
 
-- **Render Workflows orchestration**: `fetchPRDetails` runs in parallel across the top 5 PRs using `Promise.all` wrapped in Render Workflow tasks, with automatic retries (3 attempts, 1 s backoff) on each step.
+Before using the deployed app:
 
-- **LLM summarization via LiteLLM proxy**: Calls Claude through a LiteLLM-compatible endpoint. Swap models by changing `LITELLM_MODEL` — no code changes needed.
+1. Create a GitHub connector in **Agent Auth > Connectors**
+2. In the Scalekit Dashboard, go to **AgentKit > Settings > User verification** and set it to **Custom user verification**
+3. Set `PUBLIC_BASE_URL` to the exact origin where the app will run
+4. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link
 
-- **Blueprint Infrastructure-as-Code**: `render.yaml` defines the workflow worker with all required environment variables for one-click deployment.
+## What the deployed service exposes
 
-## Use cases
+- `GET /`: HTML UI with **Connect GitHub** and repository summary form
+- `POST /api/auth`: starts the GitHub OAuth flow for the current session
+- `GET /user/verify`: completes connected-account verification after OAuth
+- `POST /api/summarize`: summarizes PRs for the repository using the session's connected GitHub account
 
-- Engineering manager gets a daily PR briefing before standup without opening GitHub
-- Developer advocate demos per-user OAuth token vaulting for AI agents
-- Team lead monitors PR activity across multiple repos with a single CLI command
-- Platform engineer builds an internal tool that routes AI agent calls through individual team member credentials
+## Operational note
 
-## What's included
-
-| Service | Type | Purpose |
-|---|---|---|
-| render-pr-summarizer | Workflow Worker | Orchestrates PR fetching, parallel detail retrieval, and LLM summarization |
-
-### Workflow tasks
-
-| Task | Purpose |
-|---|---|
-| `setupGitHubAuth` | One-time per-user: generates GitHub OAuth authorization link via Scalekit AgentKit |
-| `summarizePRs` | Root orchestrator: accepts `userId`, `owner`, `repo` and returns summary |
-| `fetchOpenPRs` | Fetches open PRs via Scalekit GitHub connector, returns top 5 by comment count |
-| `fetchPRDetails` | Fetches raw diff and comment thread for a single PR (runs in parallel) |
-| `generateSummary` | Calls LLM to produce one plain-language paragraph per PR |
-
-## Next steps
-
-1. **Connect each user's GitHub account** — Run `render workflows tasks start setupGitHubAuth --local --input='["your-user-id"]'`, open the printed `authLink` in your browser, and authorize GitHub access. Scalekit stores the token; no callback server needed.
-
-2. **Trigger your first summary** — Run `render workflows tasks start summarizePRs --local --input='[{"userId":"your-user-id","owner":"octocat","repo":"Hello-World"}]'`. You should see the top 5 open PRs ranked by discussion volume and a plain-language paragraph for each one.
-
-3. **Deploy to Render and run against the live workflow** — After deploying, drop `--local` and prefix the task name with your workflow slug: `render workflows tasks start <your-workflow-slug>/summarizePRs --input='[{...}]'`. Your workflow slug is the service name shown in the Render Dashboard.
-
-## Resources
-
-- [Render Workflows official docs](https://docs.render.com/workflows)
-- [Scalekit AgentKit docs](https://docs.scalekit.com/agent-auth)
-- [Step-by-step deployment guide (cookbook)](https://cookbook-render-pr-summarizer--scalekit-starlight.netlify.app/cookbooks/render-github-pr-summarizer/)
+The sample stores session data in memory. That is acceptable for a single-instance demo. Use a shared store such as Redis or a database-backed session store in production.
