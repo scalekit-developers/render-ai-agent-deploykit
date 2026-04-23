@@ -65,7 +65,7 @@ One-time setup for your Scalekit environment. It creates the GitHub OAuth app th
 1. Go to [app.scalekit.com](https://app.scalekit.com) → **Agent Auth** → **Connectors**
 2. Add a new connector and select **GitHub**
 3. Follow the setup steps — Scalekit creates and manages the GitHub OAuth app for you
-4. Note the **connection name** assigned (e.g. `github-qkHFhMip`) — set this as `GITHUB_CONNECTION_NAME` in your environment
+4. Note the **connection name** assigned (e.g. `github-abc12345`) — Scalekit generates a unique name per environment. Set this as `GITHUB_CONNECTION_NAME` in your environment; it will be different from anyone else's.
 
 ### 2. Connect each user's GitHub account
 
@@ -185,7 +185,7 @@ The env vars are named `LITELLM_*` by convention, but they map directly to the `
 | `SCALEKIT_ENVIRONMENT_URL` | Yes | Your Scalekit environment URL |
 | `SCALEKIT_CLIENT_ID` | Yes | Scalekit app client ID |
 | `SCALEKIT_CLIENT_SECRET` | Yes | Scalekit app client secret |
-| `GITHUB_CONNECTION_NAME` | No | Scalekit GitHub connection name (default: `github-qkHFhMip`) |
+| `GITHUB_CONNECTION_NAME` | **Yes** | Connection name from Scalekit Dashboard → Agent Auth → Connectors. Unique per environment — do not use another project's name. |
 
 ## Wiring to any trigger
 

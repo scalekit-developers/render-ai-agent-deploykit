@@ -23,7 +23,12 @@ export const scalekit = new Proxy({} as ScalekitClient, {
   },
 });
 
-const GITHUB_CONNECTION_NAME = process.env.GITHUB_CONNECTION_NAME ?? "github-qkHFhMip";
+const GITHUB_CONNECTION_NAME = process.env.GITHUB_CONNECTION_NAME;
+if (!GITHUB_CONNECTION_NAME) {
+  throw new Error(
+    "GITHUB_CONNECTION_NAME is required. Copy the connection name from Scalekit Dashboard → Agent Auth → Connectors after adding a GitHub connector. Each Scalekit environment gets a unique name (e.g. github-abc12345).",
+  );
+}
 
 /**
  * Execute a pre-built GitHub tool via Scalekit on behalf of a user.

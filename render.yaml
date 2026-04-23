@@ -20,4 +20,4 @@ services:
       - key: SCALEKIT_CLIENT_SECRET
         sync: false
       - key: GITHUB_CONNECTION_NAME
-        value: github-qkHFhMip
+        sync: false
