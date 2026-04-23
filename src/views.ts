@@ -1,4 +1,13 @@
-export function renderHomePage(): string {
+export function renderHomePage({ connected }: { connected: boolean }): string {
+  const connectedBanner = connected
+    ? `<div class="connected-banner">&#10003; GitHub connected — enter a repository below to summarize pull requests.</div>`
+    : `<div class="not-connected-banner">Step 1: Connect your GitHub account before summarizing pull requests.</div>`;
+  const authHeading = connected ? "GitHub connected" : "Step 1 — Connect GitHub";
+  const authSubtitle = connected
+    ? "Your current browser session is already connected to GitHub. Click below if you want to reconnect with a different account."
+    : "Connect your GitHub account once. The app links your session to your GitHub OAuth token — no user ID required.";
+  const authButtonLabel = connected ? "Reconnect GitHub" : "Connect GitHub";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -83,6 +92,26 @@ export function renderHomePage(): string {
     button:hover { background: #333; }
     button:disabled { background: #999; cursor: not-allowed; }
 
+    .connected-banner {
+      background: #f0faf4;
+      border: 1px solid #a3d9b1;
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      color: #1a6e38;
+      font-size: 0.88rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+    }
+    .not-connected-banner {
+      background: #fffbec;
+      border: 1px solid #f0d070;
+      border-radius: 6px;
+      padding: 0.6rem 1rem;
+      color: #7a5c00;
+      font-size: 0.88rem;
+      margin-bottom: 1.5rem;
+    }
+
     /* Auth result stays inside Step 1 card */
     .auth-result { margin-top: 1.25rem; }
     .auth-result.hidden { display: none; }
@@ -92,11 +121,6 @@ export function renderHomePage(): string {
       border-radius: 6px;
       padding: 1rem;
       font-size: 0.9rem;
-    }
-    .auth-link-box a {
-      color: #1a6ef0;
-      word-break: break-all;
-      font-weight: 500;
     }
     .error-box {
       background: #fff5f5;
@@ -275,6 +299,8 @@ export function renderHomePage(): string {
     </p>
   </header>
 
+  ${connectedBanner}
+
   <details class="card card-collapsible" style="margin-bottom:1.5rem">
     <summary>
       <span class="collapsible-summary-text">
@@ -287,6 +313,7 @@ export function renderHomePage(): string {
       <p class="subtitle">The API needs Scalekit and LiteLLM settings. Configure them on Render (or in a local <code>.env</code> for development).</p>
       <ul class="help-list">
         <li><strong>Where to find values:</strong> In the <a href="https://app.scalekit.com" target="_blank" rel="noopener noreferrer">Scalekit dashboard</a>, use your app credentials for <code>SCALEKIT_ENVIRONMENT_URL</code>, <code>SCALEKIT_CLIENT_ID</code>, and <code>SCALEKIT_CLIENT_SECRET</code>. Under <strong>Agent Auth → Connectors</strong>, copy the GitHub connection name into <code>GITHUB_CONNECTION_NAME</code>. Set <code>LITELLM_API_KEY</code> and <code>LITELLM_BASE_URL</code> from your LiteLLM proxy (the repo's <code>.env.example</code> shows the expected shape).</li>
+        <li><strong>Session security:</strong> Generate a random <code>SESSION_SECRET</code> with <code>openssl rand -hex 32</code>. Set <code>PUBLIC_BASE_URL</code> to your service's public URL (e.g. <code>https://your-service.onrender.com</code>).</li>
         <li><strong>On Render:</strong> <a href="https://dashboard.render.com" target="_blank" rel="noopener noreferrer">Dashboard</a> → your web service → <strong>Environment</strong> → add or edit each variable.</li>
         <li><strong>Blueprint (<code>render.yaml</code>):</strong> Variables are listed under <code>envVars</code>. Any entry with <code>sync: false</code> is a secret you enter at deploy time or in <strong>Environment</strong>; it is not stored in the repository.</li>
       </ul>
@@ -299,24 +326,16 @@ export function renderHomePage(): string {
 
       <!-- Step 1: Connect GitHub -->
       <div class="card">
-        <h2>Step 1 — Connect GitHub</h2>
-        <p class="subtitle">Run once per user. Generates an OAuth link to authorize GitHub access.</p>
-        <div class="field">
-          <label for="auth-user-id">User ID</label>
-          <input type="text" id="auth-user-id" placeholder="e.g. alice" autocomplete="off">
-        </div>
-        <button id="auth-btn" onclick="setupAuth()">Get GitHub Auth Link</button>
+        <h2>${authHeading}</h2>
+        <p class="subtitle">${authSubtitle}</p>
+        <button id="auth-btn" onclick="connectGitHub()">${authButtonLabel}</button>
         <div class="auth-result hidden" id="auth-result"></div>
       </div>
 
       <!-- Step 2: Summarize PRs -->
       <div class="card">
-        <h2>Step 2 — Summarize Pull Requests</h2>
-        <p class="subtitle">Enter a GitHub repository. Summary appears on the right.</p>
-        <div class="field">
-          <label for="sum-user-id">User ID</label>
-          <input type="text" id="sum-user-id" placeholder="e.g. alice" autocomplete="off">
-        </div>
+        <h2>Step 2 — Summarize pull requests</h2>
+        <p class="subtitle">Enter a GitHub repository. Public repositories work with any connected GitHub account. Private repositories only work if the connected account has access.</p>
         <div class="row">
           <div class="field">
             <label for="sum-owner">Owner</label>
@@ -359,49 +378,35 @@ export function renderHomePage(): string {
       .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>');
   }
 
-  async function setupAuth() {
-    const userId = document.getElementById('auth-user-id').value.trim();
+  async function connectGitHub() {
     const resultEl = document.getElementById('auth-result');
     const btn = document.getElementById('auth-btn');
-    if (!userId) { alert('Enter a user ID'); return; }
 
     btn.disabled = true;
     resultEl.className = 'auth-result';
-    resultEl.innerHTML = '<div style="color:#555;font-size:0.88rem;margin-top:0.5rem">Generating auth link...</div>';
+    resultEl.innerHTML = '<div style="color:#555;font-size:0.88rem;margin-top:0.5rem">Generating authorization link...</div>';
 
     try {
-      const res = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
+      const res = await fetch('/api/auth', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Request failed');
 
-      // Pre-fill Step 2 with the same user ID
-      const sumUserId = document.getElementById('sum-user-id');
-      if (!sumUserId.value) sumUserId.value = userId;
-
-      resultEl.innerHTML = \`
-        <div class="auth-link-box" style="margin-top:1rem">
-          <p style="margin-bottom:0.5rem">Open this link to connect <strong>\${escHtml(userId)}</strong>'s GitHub account:</p>
-          <a href="\${escHtml(data.authLink)}" target="_blank" rel="noopener noreferrer">\${escHtml(data.authLink)}</a>
-          <p style="margin-top:0.5rem;color:#555;font-size:0.82rem">After authorizing, use Step 2 to generate summaries.</p>
-        </div>\`;
+      // Redirect the whole window through the OAuth flow.
+      // After authorization, Scalekit redirects back to /user/verify, which
+      // validates the session and then redirects to / with connected status.
+      window.location.href = data.authLink;
     } catch (err) {
       resultEl.innerHTML = \`<div class="error-box" style="margin-top:1rem">\${escHtml(err.message)}</div>\`;
-    } finally {
       btn.disabled = false;
     }
   }
 
   async function summarize() {
-    const userId = document.getElementById('sum-user-id').value.trim();
     const owner  = document.getElementById('sum-owner').value.trim();
     const repo   = document.getElementById('sum-repo').value.trim();
     const panelBody = document.getElementById('summary-panel-body');
     const btn = document.getElementById('sum-btn');
-    if (!userId || !owner || !repo) { alert('Fill in all fields'); return; }
+    if (!owner || !repo) { alert('Enter a GitHub owner and repository name'); return; }
 
     btn.disabled = true;
     panelBody.innerHTML = \`
@@ -414,7 +419,7 @@ export function renderHomePage(): string {
       const res = await fetch('/api/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, owner, repo }),
+        body: JSON.stringify({ owner, repo }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Request failed');

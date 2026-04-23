@@ -56,10 +56,15 @@ export async function githubTool(
 
 /**
  * Create or retrieve the connected account for a user, then return a GitHub
- * OAuth authorization link. The user must click this link to grant access.
- * After authorization Scalekit stores the token — no callback server needed.
+ * OAuth authorization link. After OAuth completes, Scalekit redirects the
+ * browser to userVerifyUrl so the app can bind the token to the session
+ * via verifyUser(). The state value is passed through and must be validated
+ * at the callback to prevent CSRF.
  */
-export async function getGitHubAuthLink(identifier: string): Promise<string> {
+export async function getGitHubAuthLink(
+  identifier: string,
+  opts: { state: string; userVerifyUrl: string },
+): Promise<string> {
   await scalekit.actions.getOrCreateConnectedAccount({
     connectionName: GITHUB_CONNECTION_NAME,
     identifier,
@@ -67,8 +72,26 @@ export async function getGitHubAuthLink(identifier: string): Promise<string> {
   const res = await scalekit.actions.getAuthorizationLink({
     connectionName: GITHUB_CONNECTION_NAME,
     identifier,
+    state: opts.state,
+    userVerifyUrl: opts.userVerifyUrl,
   });
   return res.link ?? "";
+}
+
+/**
+ * Complete the user-verification step after OAuth callback.
+ * Called from GET /user/verify with the auth_request_id Scalekit sends in the redirect.
+ * Returns the URL to redirect the user to after successful verification.
+ */
+export async function verifyUser(params: {
+  authRequestId: string;
+  identifier: string;
+}): Promise<string> {
+  const res = await scalekit.actions.verifyConnectedAccountUser({
+    authRequestId: params.authRequestId,
+    identifier: params.identifier,
+  });
+  return res.postUserVerifyRedirectUrl ?? "/";
 }
 
 /**

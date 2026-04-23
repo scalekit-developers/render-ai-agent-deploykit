@@ -1,11 +1,11 @@
 import { task } from "@renderinc/sdk/workflows";
 import OpenAI from "openai";
-import { githubTool, getGitHubAuthLink } from "./scalekit.js";
+import { githubRequest, githubTool, getGitHubAuthLink } from "./scalekit.js";
 
 // ---- Types ----
 
 export interface PRSummaryInput {
-  userId: string;
+  identifier: string;
   owner: string;
   repo: string;
 }
@@ -48,13 +48,13 @@ function createOpenAIClient(): OpenAI {
 const fetchOpenPRs = task(
   { name: "fetchOpenPRs", retry: { maxRetries: 3, waitDurationMs: 1000 } },
   async function fetchOpenPRs(
-    userId: string,
+    identifier: string,
     owner: string,
     repo: string,
   ): Promise<PRListItem[]> {
     console.log(`[fetchOpenPRs] Listing open PRs for ${owner}/${repo}`);
 
-    const raw = await githubTool(userId, "github_pull_requests_list", {
+    const raw = await githubTool(identifier, "github_pull_requests_list", {
       owner,
       repo,
       state: "open",
@@ -93,7 +93,7 @@ const fetchOpenPRs = task(
 const fetchPRDetails = task(
   { name: "fetchPRDetails", retry: { maxRetries: 3, waitDurationMs: 1000 } },
   async function fetchPRDetails(
-    userId: string,
+    identifier: string,
     owner: string,
     repo: string,
     prNumber: number,
@@ -102,14 +102,15 @@ const fetchPRDetails = task(
   ): Promise<PRDetail> {
     console.log(`[fetchPRDetails] Fetching PR #${prNumber}: ${title}`);
 
-    const base = `https://api.github.com/repos/${owner}/${repo}`;
-    const [diffRes, commentsRes] = await Promise.all([
-      fetch(`${base}/pulls/${prNumber}`, { headers: { Accept: "application/vnd.github.diff" } }),
-      fetch(`${base}/issues/${prNumber}/comments`),
+    const [diffRaw, commentsRaw] = await Promise.all([
+      githubRequest(identifier, `/repos/${owner}/${repo}/pulls/${prNumber}`, {
+        headers: { Accept: "application/vnd.github.diff" },
+      }),
+      githubRequest(identifier, `/repos/${owner}/${repo}/issues/${prNumber}/comments`),
     ]);
 
-    const diff = diffRes.ok ? (await diffRes.text()).slice(0, 3000) : "";
-    const commentsJson = commentsRes.ok ? await commentsRes.json() as Array<{ body?: string }> : [];
+    const diff = typeof diffRaw === "string" ? diffRaw.slice(0, 3000) : "";
+    const commentsJson = Array.isArray(commentsRaw) ? commentsRaw as Array<{ body?: string }> : [];
     const commentBodies = commentsJson.slice(0, 20).map((c) => c.body ?? "").filter(Boolean);
 
     console.log(`[fetchPRDetails] PR #${prNumber}: ${diff.length} diff chars, ${commentBodies.length} comments`);
@@ -188,15 +189,23 @@ const generateSummary = task(
 /**
  * One-time setup: create or retrieve the GitHub connected account for a user
  * and return the OAuth authorization URL. The user must open the URL and
- * authorize GitHub access. Scalekit stores the token — no callback server needed.
+ * authorize GitHub access. After authorization, Scalekit redirects to
+ * userVerifyUrl where the server binds the token to the session.
  */
 export const setupGitHubAuthTask = task(
   { name: "setupGitHubAuth" },
-  async function setupGitHubAuth(userId: string) {
-    console.log(`[setupGitHubAuth] Getting auth link for ${userId}`);
-    const link = await getGitHubAuthLink(userId);
-    console.log(`[setupGitHubAuth] Auth link: ${link}`);
-    return { userId, authLink: link, instructions: "Open the authLink in your browser to connect your GitHub account. Once authorized, run summarizePRs." };
+  async function setupGitHubAuth(params: {
+    identifier: string;
+    state: string;
+    userVerifyUrl: string;
+  }) {
+    console.log(`[setupGitHubAuth] Getting auth link for identifier ${params.identifier}`);
+    const link = await getGitHubAuthLink(params.identifier, {
+      state: params.state,
+      userVerifyUrl: params.userVerifyUrl,
+    });
+    console.log(`[setupGitHubAuth] Auth link generated`);
+    return { authLink: link };
   },
 );
 
@@ -208,10 +217,10 @@ export const setupGitHubAuthTask = task(
 export const summarizePRsTask = task(
   { name: "summarizePRs", timeoutSeconds: 120 },
   async function summarizePRs(input: PRSummaryInput) {
-    const { userId, owner, repo } = input;
-    console.log(`[summarizePRs] Starting for ${owner}/${repo} (userId: ${userId})`);
+    const { identifier, owner, repo } = input;
+    console.log(`[summarizePRs] Starting for ${owner}/${repo}`);
 
-    const topPRs = await fetchOpenPRs(userId, owner, repo);
+    const topPRs = await fetchOpenPRs(identifier, owner, repo);
 
     if (topPRs.length === 0) {
       return {
@@ -223,7 +232,7 @@ export const summarizePRsTask = task(
 
     const details = await Promise.all(
       topPRs.map((pr) =>
-        fetchPRDetails(userId, owner, repo, pr.number, pr.title, pr.comments + pr.review_comments),
+        fetchPRDetails(identifier, owner, repo, pr.number, pr.title, pr.comments + pr.review_comments),
       ),
     );
 
