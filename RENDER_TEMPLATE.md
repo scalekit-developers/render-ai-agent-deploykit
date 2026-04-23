@@ -61,7 +61,8 @@ Before using the deployed app:
 
 1. Create a GitHub connector in **Agent Auth > Connectors**
 2. Set **User Verification** to **Custom user verification**
-3. Add `${PUBLIC_BASE_URL}/user/verify` to the connector's allowed verify URLs
+3. Set `PUBLIC_BASE_URL` to the exact origin where the app will run
+4. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link
 
 ## What the deployed service exposes
 

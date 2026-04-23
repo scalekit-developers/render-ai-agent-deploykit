@@ -53,7 +53,7 @@ Completes the connected-account verification flow after Scalekit redirects back 
 - Validates the one-time `state`
 - Calls `verifyConnectedAccountUser`
 - Marks the session as connected
-- Redirects back to `/` or to Scalekit's `postUserVerifyRedirectUrl`
+- Redirects back to `/`
 
 ### `POST /api/summarize`
 
@@ -87,9 +87,8 @@ If the session has not connected GitHub yet, the server returns `401`.
 This sample uses the secure connected-account verification flow from Scalekit's docs.
 
 1. In the same connector, set **Agent Auth > User Verification** to **Custom user verification**
-2. Add your verify URL to the connector's allowed verify URLs
-3. Use `http://localhost:3000/user/verify` for local development
-4. Use `https://your-service.onrender.com/user/verify` in production
+2. Keep `PUBLIC_BASE_URL` set to the exact origin where the app is running
+3. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link
 
 ### 3. Configure local environment variables
 
@@ -113,6 +112,10 @@ npm run dev
 ```
 
 Open `http://localhost:3000`, click **Connect GitHub**, finish OAuth, then submit an `owner` and `repo`.
+
+After the callback succeeds, the page shows a **GitHub connected** banner and the Step 1 button changes to **Reconnect GitHub**.
+
+Public repositories work with any connected GitHub account. Private repositories only work if the connected account has access.
 
 ## Deploy to Render
 
