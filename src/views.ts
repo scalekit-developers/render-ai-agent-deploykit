@@ -4,7 +4,7 @@ export function renderHomePage(): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Render PR Summarizer</title>
+  <title>Multi-User GitHub PR Summarizer Agent</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -266,7 +266,7 @@ export function renderHomePage(): string {
 <body>
 <div class="container">
   <header>
-    <h1>Render PR Summarizer</h1>
+    <h1>Multi-User GitHub PR Summarizer Agent</h1>
     <p>Summarize the most-discussed open pull requests in any GitHub repository using AI.</p>
     <p class="header-links">
       <a href="https://github.com/scalekit-developers/render-ai-agent-deploykit/blob/main/README.md" target="_blank" rel="noopener noreferrer">README on GitHub</a>
