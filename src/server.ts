@@ -19,6 +19,10 @@ function getPublicBaseUrl(): string {
   return v.replace(/\/$/, "");
 }
 
+function getSingleQueryParam(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
 function formatSummarizeError(owner: string, repo: string, err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   const isRepoNotFound =
@@ -74,8 +78,9 @@ export function startServer(): void {
   // OAuth callback — Scalekit redirects here after the user completes GitHub authorization.
   // Validates the state cookie to prevent CSRF, then activates the connected account.
   app.get("/user/verify", async (req, res) => {
-    const { auth_request_id, state } = req.query as Record<string, string>;
-    if (!auth_request_id || !state) {
+    const authRequestId = getSingleQueryParam(req.query.auth_request_id);
+    const state = getSingleQueryParam(req.query.state);
+    if (!authRequestId || !state) {
       res.status(400).send("Missing auth_request_id or state");
       return;
     }
@@ -95,7 +100,7 @@ export function startServer(): void {
 
     try {
       await verifyUser({
-        authRequestId: auth_request_id,
+        authRequestId,
         identifier: entry.identifier,
       });
       markConnected(entry);

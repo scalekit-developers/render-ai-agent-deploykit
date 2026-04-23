@@ -49,7 +49,11 @@ function parseCookieHeader(header: string | undefined): Record<string, string> {
     header.split(";").flatMap((pair) => {
       const eq = pair.indexOf("=");
       if (eq < 0) return [];
-      return [[pair.slice(0, eq).trim(), decodeURIComponent(pair.slice(eq + 1).trim())]];
+      try {
+        return [[pair.slice(0, eq).trim(), decodeURIComponent(pair.slice(eq + 1).trim())]];
+      } catch {
+        return [];
+      }
     }),
   );
 }
@@ -78,7 +82,9 @@ export function requireSession(req: Request, res: Response): Session {
   // The cookie payload is already a random opaque session id. HMAC signing is
   // enough to detect tampering; encrypting the cookie would not add meaningful
   // protection for this sample because there is no sensitive plaintext inside it.
-  const secure = process.env.NODE_ENV === "production";
+  const secure =
+    process.env.NODE_ENV === "production" ||
+    process.env.PUBLIC_BASE_URL?.startsWith("https://") === true;
   const parts = [
     `${COOKIE_NAME}=${sign(sessionId)}`,
     "HttpOnly",

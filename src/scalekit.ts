@@ -76,7 +76,12 @@ export async function getGitHubAuthLink(
     state: opts.state,
     userVerifyUrl: opts.userVerifyUrl,
   });
-  return res.link ?? "";
+  if (!res.link) {
+    throw new Error(
+      `Scalekit did not return a GitHub authorization link for '${GITHUB_CONNECTION_NAME}' and identifier '${identifier}'`,
+    );
+  }
+  return res.link;
 }
 
 /**
