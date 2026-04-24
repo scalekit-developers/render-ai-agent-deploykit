@@ -4,6 +4,11 @@ import type { JsonObject } from "@bufbuild/protobuf";
 
 let _scalekit: ScalekitClient | null = null;
 
+function summarizeIdentifier(identifier: string): string {
+  if (identifier.length <= 12) return identifier;
+  return `${identifier.slice(0, 8)}...${identifier.slice(-4)}`;
+}
+
 function getScalekit(): ScalekitClient {
   if (_scalekit) return _scalekit;
   if (!process.env.SCALEKIT_ENVIRONMENT_URL || !process.env.SCALEKIT_CLIENT_ID || !process.env.SCALEKIT_CLIENT_SECRET) {
@@ -42,15 +47,24 @@ export async function githubTool(
   toolInput: Record<string, unknown>,
 ): Promise<JsonObject> {
   try {
+    console.log(
+      `[githubTool:start] identifier=${summarizeIdentifier(identifier)} tool=${toolName}`,
+    );
     const res = await scalekit.actions.executeTool({
       toolName,
       toolInput,
       connector: GITHUB_CONNECTION_NAME,
       identifier,
     });
+    console.log(
+      `[githubTool:success] identifier=${summarizeIdentifier(identifier)} tool=${toolName}`,
+    );
     return res.data ?? {};
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[githubTool:error] identifier=${summarizeIdentifier(identifier)} tool=${toolName} message=${msg}`,
+    );
     throw `GitHub tool '${toolName}' failed: ${msg}`;
   }
 }
@@ -92,10 +106,16 @@ export async function verifyUser(params: {
   authRequestId: string;
   identifier: string;
 }): Promise<void> {
+  console.log(
+    `[verifyUser:start] identifier=${summarizeIdentifier(params.identifier)} authRequestId=${params.authRequestId}`,
+  );
   await scalekit.actions.verifyConnectedAccountUser({
     authRequestId: params.authRequestId,
     identifier: params.identifier,
   });
+  console.log(
+    `[verifyUser:success] identifier=${summarizeIdentifier(params.identifier)} authRequestId=${params.authRequestId}`,
+  );
 }
 
 /**
@@ -113,6 +133,9 @@ export async function githubRequest(
   } = {},
 ): Promise<unknown> {
   try {
+    console.log(
+      `[githubRequest:start] identifier=${summarizeIdentifier(identifier)} path=${path} method=${options.method ?? "GET"}`,
+    );
     const res = await scalekit.actions.request({
       connectionName: GITHUB_CONNECTION_NAME,
       identifier,
@@ -121,15 +144,20 @@ export async function githubRequest(
       headers: options.headers,
       queryParams: options.queryParams,
     });
+    console.log(
+      `[githubRequest:success] identifier=${summarizeIdentifier(identifier)} path=${path} method=${options.method ?? "GET"}`,
+    );
     return res.data;
   } catch (err) {
-    console.error("[githubRequest] raw error:", err);
     const msg =
       err instanceof Error
         ? err.message
         : typeof err === "object" && err !== null
           ? JSON.stringify(err, Object.getOwnPropertyNames(err as object))
           : String(err);
+    console.error(
+      `[githubRequest:error] identifier=${summarizeIdentifier(identifier)} path=${path} method=${options.method ?? "GET"} message=${msg}`,
+    );
     throw new Error(`GitHub request to '${path}' failed: ${msg}`);
   }
 }

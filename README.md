@@ -30,7 +30,7 @@ The app serves a browser UI at `http://localhost:3000` in development or at your
 The UI has two steps:
 
 1. **Connect GitHub**. Click **Connect GitHub** and complete the OAuth flow in the same browser session.
-2. **Summarize pull requests**. Enter a GitHub owner and repository name, then generate summaries.
+2. **Summarize pull requests**. Paste a GitHub repository URL or enter `owner/repo`, then generate summaries.
 
 When the callback succeeds, the page shows a **GitHub connected** banner. There is no user ID field anywhere in the UI.
 
@@ -63,13 +63,14 @@ Summarizes the top open PRs for a repository using the GitHub account connected 
 curl -X POST https://your-service.onrender.com/api/summarize \
   -H "Content-Type: application/json" \
   --cookie "sid=YOUR_SIGNED_SESSION_COOKIE" \
-  -d '{"owner":"octocat","repo":"Hello-World"}'
+  -d '{"repository":"https://github.com/octocat/Hello-World"}'
 ```
 
 | Field | Description |
 |---|---|
-| `owner` | GitHub repo owner (organization or username) |
-| `repo` | GitHub repo name |
+| `repository` | GitHub repository URL or `owner/repo` value |
+| `owner` | Optional backward-compatible owner field |
+| `repo` | Optional backward-compatible repo field |
 
 If the session has not connected GitHub yet, the server returns `401`.
 
@@ -112,7 +113,7 @@ Important variables:
 npm run dev
 ```
 
-Open `http://localhost:3000`, click **Connect GitHub**, finish OAuth, then submit an `owner` and `repo`.
+Open `http://localhost:3000`, click **Connect GitHub**, finish OAuth, then paste a GitHub repository URL or enter `owner/repo`.
 
 After the callback succeeds, the page shows a **GitHub connected** banner and the Step 1 button changes to **Reconnect GitHub**.
 
@@ -150,7 +151,7 @@ Scalekit connected account + auth link
   ▼ GET /user/verify?auth_request_id=...&state=...
 Express server validates state and calls verifyConnectedAccountUser
   │
-  ▼ POST /api/summarize { owner, repo }
+  ▼ POST /api/summarize { repository }
 Render tasks + Scalekit GitHub connector + LLM
 ```
 
