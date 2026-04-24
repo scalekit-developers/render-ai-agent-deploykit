@@ -115,7 +115,7 @@ function formatSummarizeError(owner: string, repo: string, err: unknown): string
   }
 
   if (isRepoForbidden || isApiForbidden) {
-    return `The connected GitHub account does not have permission to access '${owner}/${repo}'. Reconnect GitHub with an account that can read this repository, and if the repo belongs to an organization, make sure org access or SSO authorization has been granted.`;
+    return `GitHub blocked this app from accessing '${owner}/${repo}'. The connected GitHub account may still be able to open the repository directly, but the OAuth app token used by this session does not currently have permission. Reconnect GitHub after confirming the app has the right scopes, and if the repository belongs to an organization, make sure an org admin has approved this OAuth app for private repository access.`;
   }
 
   return msg;
