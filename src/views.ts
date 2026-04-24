@@ -335,16 +335,10 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       <!-- Step 2: Summarize PRs -->
       <div class="card">
         <h2>Step 2 — Summarize pull requests</h2>
-        <p class="subtitle">Enter a GitHub repository. Public repositories work with any connected GitHub account. Private repositories only work if the connected account has access.</p>
-        <div class="row">
-          <div class="field">
-            <label for="sum-owner">Owner</label>
-            <input type="text" id="sum-owner" placeholder="e.g. render-oss" autocomplete="off">
-          </div>
-          <div class="field">
-            <label for="sum-repo">Repository</label>
-            <input type="text" id="sum-repo" placeholder="e.g. sdk" autocomplete="off">
-          </div>
+        <p class="subtitle">Paste a GitHub repository URL or an <code>owner/repo</code> value. Public repositories work with any connected GitHub account. Private repositories only work if the connected account has access.</p>
+        <div class="field">
+          <label for="sum-repository">GitHub repository</label>
+          <input type="text" id="sum-repository" placeholder="https://github.com/render-oss/sdk" autocomplete="off">
         </div>
         <button id="sum-btn" onclick="summarize()">Summarize PRs</button>
       </div>
@@ -402,11 +396,10 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
   }
 
   async function summarize() {
-    const owner  = document.getElementById('sum-owner').value.trim();
-    const repo   = document.getElementById('sum-repo').value.trim();
+    const repository = document.getElementById('sum-repository').value.trim();
     const panelBody = document.getElementById('summary-panel-body');
     const btn = document.getElementById('sum-btn');
-    if (!owner || !repo) { alert('Enter a GitHub owner and repository name'); return; }
+    if (!repository) { alert('Enter a GitHub repository URL or owner/repo value'); return; }
 
     btn.disabled = true;
     panelBody.innerHTML = \`
@@ -419,7 +412,7 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       const res = await fetch('/api/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ owner, repo }),
+        body: JSON.stringify({ repository }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Request failed');
@@ -430,7 +423,7 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
 
       panelBody.innerHTML = \`
         <div class="summary-content">
-          <div class="summary-meta">\${escHtml(owner)}/\${escHtml(repo)} &middot; top \${data.prsAnalyzed?.length ?? 0} PRs by discussion</div>
+          <div class="summary-meta">\${escHtml(data.repository)} &middot; top \${data.prsAnalyzed?.length ?? 0} PRs by discussion</div>
           \${prsHtml}
           <div class="summary-text">\${mdToHtml(data.summary)}</div>
         </div>\`;
