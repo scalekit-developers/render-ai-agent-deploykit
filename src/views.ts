@@ -363,6 +363,8 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
 </div>
 
 <script>
+  const RENDER_DEPLOY_URL = 'https://render.com/deploy?repo=https://github.com/scalekit-developers/render-ai-agent-deploykit';
+
   function escHtml(str) {
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
@@ -370,6 +372,18 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
   function mdToHtml(md) {
     return escHtml(md)
       .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>');
+  }
+
+  function renderErrorHtml(message) {
+    return escHtml(message)
+      .replace(
+        escHtml(RENDER_DEPLOY_URL),
+        '<a href="' + RENDER_DEPLOY_URL + '" target="_blank" rel="noopener noreferrer">Deploy this on your own Render</a>',
+      )
+      .replace(
+        'support@scalekit.com',
+        '<a href="mailto:support@scalekit.com">support@scalekit.com</a>',
+      );
   }
 
   async function connectGitHub() {
@@ -390,7 +404,7 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       // validates the session and then redirects to / with connected status.
       window.location.href = data.authLink;
     } catch (err) {
-      resultEl.innerHTML = \`<div class="error-box" style="margin-top:1rem">\${escHtml(err.message)}</div>\`;
+      resultEl.innerHTML = \`<div class="error-box" style="margin-top:1rem">\${renderErrorHtml(err.message)}</div>\`;
       btn.disabled = false;
     }
   }
@@ -428,7 +442,7 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
           <div class="summary-text">\${mdToHtml(data.summary)}</div>
         </div>\`;
     } catch (err) {
-      panelBody.innerHTML = \`<div class="summary-error">\${escHtml(err.message)}</div>\`;
+      panelBody.innerHTML = \`<div class="summary-error">\${renderErrorHtml(err.message)}</div>\`;
     } finally {
       btn.disabled = false;
     }

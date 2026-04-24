@@ -98,6 +98,21 @@ function resolveRepoInput(body: {
   return parsed;
 }
 
+function isLikelyAiCreditError(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return [
+    "insufficient_quota",
+    "quota exceeded",
+    "quota_exceeded",
+    "credit balance",
+    "credits exhausted",
+    "billing",
+    "payment required",
+    "rate limit exceeded",
+    "too many requests",
+  ].some((pattern) => normalized.includes(pattern));
+}
+
 function formatSummarizeError(owner: string, repo: string, err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   const isRepoNotFound =
@@ -116,6 +131,10 @@ function formatSummarizeError(owner: string, repo: string, err: unknown): string
 
   if (isRepoForbidden || isApiForbidden) {
     return `GitHub blocked this app from accessing '${owner}/${repo}'. The connected GitHub account may still be able to open the repository directly, but the OAuth app token used by this session does not currently have permission. Reconnect GitHub after confirming the app has the right scopes, and if the repository belongs to an organization, make sure an org admin has approved this OAuth app for private repository access.`;
+  }
+
+  if (isLikelyAiCreditError(msg)) {
+    return "The demo AI summarizer is temporarily unavailable because the shared model credits appear to be exhausted. Deploy this on your own Render: https://render.com/deploy?repo=https://github.com/scalekit-developers/render-ai-agent-deploykit or email support@scalekit.com for help.";
   }
 
   return msg;
