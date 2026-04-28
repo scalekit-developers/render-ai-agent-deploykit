@@ -34,6 +34,22 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
     .header-links a { color: #1a6ef0; font-weight: 500; }
     .header-links a:hover { text-decoration: underline; }
     .header-links-sep { color: #aaa; margin: 0 0.4rem; user-select: none; }
+    .resource-links {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e6e6e6;
+      color: #777;
+      font-size: 0.84rem;
+      line-height: 1.6;
+    }
+    .resource-links strong {
+      color: #555;
+      font-weight: 600;
+      margin-right: 0.25rem;
+    }
+    .resource-links a { color: #1a6ef0; font-weight: 500; }
+    .resource-links a:hover { text-decoration: underline; }
+    .resource-links-sep { color: #b5b5b5; margin: 0 0.45rem; user-select: none; }
 
     /* Two-column layout */
     .layout {
@@ -296,6 +312,8 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       <a href="https://github.com/scalekit-developers/render-ai-agent-deploykit/blob/main/README.md" target="_blank" rel="noopener noreferrer">README on GitHub</a>
       <span class="header-links-sep" aria-hidden="true">·</span>
       <a href="https://docs.scalekit.com/cookbooks/render-github-pr-summarizer/" target="_blank" rel="noopener noreferrer">Scalekit cookbook</a>
+      <span class="header-links-sep" aria-hidden="true">·</span>
+      <a href="https://docs.scalekit.com/" target="_blank" rel="noopener noreferrer">Scalekit docs</a>
     </p>
   </header>
 
@@ -312,10 +330,11 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
     <div class="collapsible-body">
       <p class="subtitle">The API needs Scalekit and LiteLLM settings. Configure them on Render (or in a local <code>.env</code> for development).</p>
       <ul class="help-list">
-        <li><strong>Where to find values:</strong> In the <a href="https://app.scalekit.com" target="_blank" rel="noopener noreferrer">Scalekit dashboard</a>, use your app credentials for <code>SCALEKIT_ENVIRONMENT_URL</code>, <code>SCALEKIT_CLIENT_ID</code>, and <code>SCALEKIT_CLIENT_SECRET</code>. Under <strong>Agent Auth → Connectors</strong>, copy the GitHub connection name into <code>GITHUB_CONNECTION_NAME</code>. Set <code>LITELLM_API_KEY</code> and <code>LITELLM_BASE_URL</code> from your LiteLLM proxy (the repo's <code>.env.example</code> shows the expected shape).</li>
+        <li><strong>Where to find values:</strong> In the <a href="https://app.scalekit.com" target="_blank" rel="noopener noreferrer">Scalekit dashboard</a>, use your app credentials for <code>SCALEKIT_ENVIRONMENT_URL</code>, <code>SCALEKIT_CLIENT_ID</code>, and <code>SCALEKIT_CLIENT_SECRET</code>. Under <a href="https://docs.scalekit.com/agentkit/connectors/" target="_blank" rel="noopener noreferrer"><strong>Agent Auth → Connectors</strong></a>, copy the GitHub connection name into <code>GITHUB_CONNECTION_NAME</code>. Set <code>LITELLM_API_KEY</code> and <code>LITELLM_BASE_URL</code> from your LiteLLM proxy (the repo's <code>.env.example</code> shows the expected shape).</li>
         <li><strong>Session security:</strong> Generate a random <code>SESSION_SECRET</code> with <code>openssl rand -hex 32</code>. Set <code>PUBLIC_BASE_URL</code> to your service's public URL (e.g. <code>https://your-service.onrender.com</code>).</li>
         <li><strong>On Render:</strong> <a href="https://dashboard.render.com" target="_blank" rel="noopener noreferrer">Dashboard</a> → your web service → <strong>Environment</strong> → add or edit each variable.</li>
         <li><strong>Blueprint (<code>render.yaml</code>):</strong> Variables are listed under <code>envVars</code>. Any entry with <code>sync: false</code> is a secret you enter at deploy time or in <strong>Environment</strong>; it is not stored in the repository.</li>
+        <li><strong>More examples:</strong> Browse the <a href="https://docs.scalekit.com/agentkit/examples/" target="_blank" rel="noopener noreferrer">AgentKit examples</a> or <a href="https://github.com/scalekit-developers/agent-auth-examples" target="_blank" rel="noopener noreferrer">more GitHub examples</a>.</li>
       </ul>
     </div>
   </details>
@@ -360,6 +379,19 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       </div>
     </div>
   </div>
+
+  <p class="resource-links">
+    <strong>Resources:</strong>
+    <a href="https://www.scalekit.com/" target="_blank" rel="noopener noreferrer">Scalekit</a>
+    <span class="resource-links-sep" aria-hidden="true">·</span>
+    <a href="https://docs.scalekit.com/" target="_blank" rel="noopener noreferrer">Docs</a>
+    <span class="resource-links-sep" aria-hidden="true">·</span>
+    <a href="https://docs.scalekit.com/agentkit/connectors/" target="_blank" rel="noopener noreferrer">Connectors</a>
+    <span class="resource-links-sep" aria-hidden="true">·</span>
+    <a href="https://docs.scalekit.com/agentkit/examples/" target="_blank" rel="noopener noreferrer">Examples</a>
+    <span class="resource-links-sep" aria-hidden="true">·</span>
+    <a href="https://github.com/scalekit-developers/agent-auth-examples" target="_blank" rel="noopener noreferrer">More GitHub examples</a>
+  </p>
 </div>
 
 <script>
