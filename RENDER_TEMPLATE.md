@@ -55,7 +55,15 @@ Generate `SESSION_SECRET` with `openssl rand -hex 32`.
 
 Set `PUBLIC_BASE_URL` to the public origin of the deployed service, for example `https://your-service.onrender.com`.
 
-`OPENAI_MODEL` defaults to `gpt-4.1-mini`. Leave `OPENAI_BASE_URL` empty for OpenAI, or set it when using an OpenAI-compatible proxy.
+The app accepts any OpenAI-compatible API:
+
+| | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `OPENAI_MODEL` |
+|---|---|---|---|
+| **OpenAI direct** | your OpenAI key (`sk-...`) | *(leave empty)* | `gpt-4.1-mini` |
+| **LiteLLM proxy** | your proxy token | proxy URL (e.g. `https://llm.example.com`) | any model the proxy serves (e.g. `claude-haiku-4-5`) |
+| **Azure / Ollama / other** | your key or token | your endpoint URL | your model name |
+
+Leave `OPENAI_BASE_URL` empty to reach OpenAI directly. Set it to route all LLM calls through a proxy using your proxy token as the API key. The `OPENAI_MODEL` default is `gpt-4.1-mini`.
 
 If you deploy from the included `render.yaml`, Render auto-generates `SESSION_SECRET`. You still need to supply `PUBLIC_BASE_URL`.
 

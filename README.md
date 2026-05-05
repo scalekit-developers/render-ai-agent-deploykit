@@ -112,9 +112,16 @@ Important variables:
 - `SESSION_SECRET`: generate with `openssl rand -hex 32`
 - `PUBLIC_BASE_URL`: optional override for the callback origin; set it to `http://localhost:3000` locally or your public Render URL in production if you want to pin the callback URL explicitly
 - `GITHUB_CONNECTION_NAME`: copy from the Scalekit dashboard
-- `OPENAI_API_KEY`: your OpenAI API key
-- `OPENAI_MODEL`: defaults to `gpt-4.1-mini`
-- `OPENAI_BASE_URL`: optional; set only when using an OpenAI-compatible proxy
+
+**LLM configuration** — the app accepts any OpenAI-compatible API. Pick the row that matches your setup:
+
+| | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `OPENAI_MODEL` |
+|---|---|---|---|
+| **OpenAI direct** | your OpenAI key (`sk-...`) | *(leave empty)* | `gpt-4.1-mini` |
+| **LiteLLM proxy** | your proxy token | proxy URL (e.g. `https://llm.example.com`) | any model the proxy serves (e.g. `claude-haiku-4-5`) |
+| **Azure / Ollama / other** | your key or token | your endpoint URL | your model name |
+
+Leave `OPENAI_BASE_URL` empty to reach OpenAI directly. Set it to route all LLM calls through a proxy using your proxy token as the API key. The `OPENAI_MODEL` default is `gpt-4.1-mini`.
 
 ### 4. Run the app
 
