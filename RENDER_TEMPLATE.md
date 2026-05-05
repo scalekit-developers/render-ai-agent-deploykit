@@ -41,9 +41,9 @@ Scalekit GitHub connector fetches PR data with the connected user's token
 ## Required environment variables
 
 - `PORT`
-- `LITELLM_API_KEY`
-- `LITELLM_BASE_URL`
-- `LITELLM_MODEL`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_MODEL`
 - `SCALEKIT_ENVIRONMENT_URL`
 - `SCALEKIT_CLIENT_ID`
 - `SCALEKIT_CLIENT_SECRET`
@@ -55,6 +55,8 @@ Generate `SESSION_SECRET` with `openssl rand -hex 32`.
 
 Set `PUBLIC_BASE_URL` to the public origin of the deployed service, for example `https://your-service.onrender.com`.
 
+`OPENAI_MODEL` defaults to `gpt-4o-mini`. Leave `OPENAI_BASE_URL` empty for OpenAI, or set it when using an OpenAI-compatible proxy.
+
 If you deploy from the included `render.yaml`, Render auto-generates `SESSION_SECRET`. You still need to supply `PUBLIC_BASE_URL`.
 
 ## Scalekit connector setup
@@ -62,9 +64,13 @@ If you deploy from the included `render.yaml`, Render auto-generates `SESSION_SE
 Before using the deployed app:
 
 1. Create a GitHub connector in **Agent Auth > Connectors**
-2. In the Scalekit Dashboard, go to **AgentKit > Settings > User verification** and set it to **Custom user verification**
-3. Set `PUBLIC_BASE_URL` to the exact origin where the app will run
-4. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link
+2. Copy the **Redirect URI** shown by Scalekit for that connection
+3. In GitHub's OAuth App settings, set **Authorization callback URL** to the Scalekit Redirect URI, not this Render app's URL
+4. In the Scalekit Dashboard, go to **AgentKit > Settings > User verification** and set it to **Custom user verification**
+5. Set `PUBLIC_BASE_URL` to the exact origin where the app will run
+6. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link
+
+If the browser shows a GitHub-side 404 or redirect error before this service logs `[auth:verify:start]`, the GitHub OAuth App callback URL is usually pointing at the wrong URL. Copy the Scalekit connection Redirect URI again and paste it into GitHub exactly.
 
 ## What the deployed service exposes
 

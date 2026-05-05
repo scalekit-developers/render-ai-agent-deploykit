@@ -27,14 +27,17 @@ interface PRDetail {
 
 // ---- LLM client ----
 
+const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+
 function createOpenAIClient(): OpenAI {
-  const apiKey = process.env.LITELLM_API_KEY ?? process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY ?? process.env.LITELLM_API_KEY;
   if (!apiKey) {
-    throw new Error("LITELLM_API_KEY environment variable not set.");
+    throw new Error("OPENAI_API_KEY environment variable not set.");
   }
   const options: ConstructorParameters<typeof OpenAI>[0] = { apiKey };
-  if (process.env.LITELLM_BASE_URL) {
-    options.baseURL = process.env.LITELLM_BASE_URL;
+  const baseURL = process.env.OPENAI_BASE_URL ?? process.env.LITELLM_BASE_URL;
+  if (baseURL) {
+    options.baseURL = baseURL;
   }
   return new OpenAI(options);
 }
@@ -120,7 +123,7 @@ const fetchPRDetails = task(
 );
 
 /**
- * Call the LLM (via LiteLLM proxy) to generate one paragraph per PR.
+ * Call the LLM through the OpenAI SDK to generate one paragraph per PR.
  * Returns a formatted markdown string with a section for each PR.
  */
 const generateSummary = task(
@@ -157,7 +160,7 @@ const generateSummary = task(
       .join("\n\n---\n\n");
 
     const response = await client.chat.completions.create({
-      model: process.env.LITELLM_MODEL ?? "claude-haiku-4-5",
+      model: process.env.OPENAI_MODEL ?? process.env.LITELLM_MODEL ?? DEFAULT_OPENAI_MODEL,
       messages: [
         {
           role: "system",

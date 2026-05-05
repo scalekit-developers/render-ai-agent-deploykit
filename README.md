@@ -4,7 +4,7 @@
 
 This sample shows how to build a GitHub PR summarizer where each browser session connects its own GitHub account once, then uses that connected token for later tool calls. The server never asks the browser for a `userId`.
 
-The app finds the five most-discussed open pull requests in a repository, fetches each PR's diff and comment thread through Scalekit's GitHub connector, then calls an LLM through any OpenAI-compatible API to produce a plain-language summary.
+The app finds the five most-discussed open pull requests in a repository, fetches each PR's diff and comment thread through Scalekit's GitHub connector, then calls OpenAI to produce a plain-language summary. You can also point the OpenAI SDK at an OpenAI-compatible endpoint by setting `OPENAI_BASE_URL`.
 
 ## Why this version is secure
 
@@ -80,8 +80,12 @@ If the session has not connected GitHub yet, the server returns `401`.
 
 1. Open [app.scalekit.com](https://app.scalekit.com) and go to **Agent Auth > Connectors**
 2. Add a **GitHub** connector
-3. Finish the connector setup
-4. Copy the generated connection name into `GITHUB_CONNECTION_NAME`
+3. Copy the **Redirect URI** shown by Scalekit for this GitHub connection
+4. In GitHub's OAuth App settings, set **Authorization callback URL** to that Scalekit Redirect URI
+5. Finish the connector setup
+6. Copy the generated connection name into `GITHUB_CONNECTION_NAME`
+
+Do not set GitHub's OAuth App callback to your Render service URL. `PUBLIC_BASE_URL/user/verify` is the callback Scalekit uses after GitHub OAuth completes; GitHub itself must redirect back to Scalekit's connection Redirect URI.
 
 ### 2. Enable custom user verification
 
@@ -91,6 +95,8 @@ This sample uses the secure connected-account verification flow from Scalekit's 
 2. Set `PUBLIC_BASE_URL` if you want to pin the callback origin explicitly
 3. If `PUBLIC_BASE_URL` is unset, the app falls back to the incoming request origin
 4. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link when that variable is set
+
+If GitHub shows a 404 or redirect error before this app logs `[auth:verify:start]`, check the GitHub OAuth App callback URL first. It should exactly match the Scalekit connection Redirect URI, including protocol, path, and any trailing slash.
 
 ### 3. Configure local environment variables
 
@@ -106,6 +112,9 @@ Important variables:
 - `SESSION_SECRET`: generate with `openssl rand -hex 32`
 - `PUBLIC_BASE_URL`: optional override for the callback origin; set it to `http://localhost:3000` locally or your public Render URL in production if you want to pin the callback URL explicitly
 - `GITHUB_CONNECTION_NAME`: copy from the Scalekit dashboard
+- `OPENAI_API_KEY`: your OpenAI API key
+- `OPENAI_MODEL`: defaults to `gpt-4o-mini`
+- `OPENAI_BASE_URL`: optional; set only when using an OpenAI-compatible proxy
 
 ### 4. Run the app
 
@@ -125,7 +134,7 @@ Public repositories work with any connected GitHub account. Private repositories
 
 Render reads `render.yaml` and creates a Node web service. Set the required secrets in the Render dashboard:
 
-- `LITELLM_API_KEY`
+- `OPENAI_API_KEY`
 - `SCALEKIT_ENVIRONMENT_URL`
 - `SCALEKIT_CLIENT_ID`
 - `SCALEKIT_CLIENT_SECRET`

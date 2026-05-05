@@ -1,7 +1,7 @@
 {
   "name": "render-pr-summarizer",
   "version": "1.0.0",
-  "description": "Render Workflow: summarize the most-discussed open PRs in any GitHub repo using Claude via LiteLLM",
+  "description": "Render web service: summarize the most-discussed open PRs in any GitHub repo using OpenAI",
   "type": "module",
   "scripts": {
     "build": "tsc",
