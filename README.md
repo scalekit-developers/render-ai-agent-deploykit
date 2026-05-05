@@ -78,7 +78,7 @@ If the session has not connected GitHub yet, the server returns `401`.
 
 ### 1. Configure the Scalekit GitHub connector
 
-1. Open [app.scalekit.com](https://app.scalekit.com) and go to **Agent Auth > Connectors**
+1. Open [app.scalekit.com](https://app.scalekit.com) and go to **AgentKit > Connectors**
 2. Add a **GitHub** connector
 3. Copy the **Redirect URI** shown by Scalekit for this GitHub connection
 4. In GitHub's OAuth App settings, set **Authorization callback URL** to that Scalekit Redirect URI
@@ -113,7 +113,7 @@ Important variables:
 - `PUBLIC_BASE_URL`: optional override for the callback origin; set it to `http://localhost:3000` locally or your public Render URL in production if you want to pin the callback URL explicitly
 - `GITHUB_CONNECTION_NAME`: copy from the Scalekit dashboard
 - `OPENAI_API_KEY`: your OpenAI API key
-- `OPENAI_MODEL`: defaults to `gpt-4o-mini`
+- `OPENAI_MODEL`: defaults to `gpt-4.1-mini`
 - `OPENAI_BASE_URL`: optional; set only when using an OpenAI-compatible proxy
 
 ### 4. Run the app

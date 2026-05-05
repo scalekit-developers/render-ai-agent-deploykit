@@ -55,7 +55,7 @@ Generate `SESSION_SECRET` with `openssl rand -hex 32`.
 
 Set `PUBLIC_BASE_URL` to the public origin of the deployed service, for example `https://your-service.onrender.com`.
 
-`OPENAI_MODEL` defaults to `gpt-4o-mini`. Leave `OPENAI_BASE_URL` empty for OpenAI, or set it when using an OpenAI-compatible proxy.
+`OPENAI_MODEL` defaults to `gpt-4.1-mini`. Leave `OPENAI_BASE_URL` empty for OpenAI, or set it when using an OpenAI-compatible proxy.
 
 If you deploy from the included `render.yaml`, Render auto-generates `SESSION_SECRET`. You still need to supply `PUBLIC_BASE_URL`.
 
@@ -63,7 +63,7 @@ If you deploy from the included `render.yaml`, Render auto-generates `SESSION_SE
 
 Before using the deployed app:
 
-1. Create a GitHub connector in **Agent Auth > Connectors**
+1. Create a GitHub connector in **AgentKit > Connectors**
 2. Copy the **Redirect URI** shown by Scalekit for that connection
 3. In GitHub's OAuth App settings, set **Authorization callback URL** to the Scalekit Redirect URI, not this Render app's URL
 4. In the Scalekit Dashboard, go to **AgentKit > Settings > User verification** and set it to **Custom user verification**

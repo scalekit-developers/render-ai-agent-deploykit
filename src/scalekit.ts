@@ -31,7 +31,7 @@ export const scalekit = new Proxy({} as ScalekitClient, {
 const GITHUB_CONNECTION_NAME = (() => {
   const v = process.env.GITHUB_CONNECTION_NAME;
   if (!v) throw new Error(
-    "GITHUB_CONNECTION_NAME is required. Copy the connection name from Scalekit Dashboard → Agent Auth → Connectors. Each Scalekit environment gets a unique name (e.g. github-abc12345).",
+    "GITHUB_CONNECTION_NAME is required. Copy the connection name from Scalekit Dashboard → AgentKit → Connectors. Each Scalekit environment gets a unique name (e.g. github-abc12345).",
   );
   return v;
 })();

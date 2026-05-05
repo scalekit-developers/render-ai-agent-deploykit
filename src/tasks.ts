@@ -27,7 +27,7 @@ interface PRDetail {
 
 // ---- LLM client ----
 
-const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+const DEFAULT_OPENAI_MODEL = "gpt-4.1-mini";
 
 function createOpenAIClient(): OpenAI {
   const apiKey = process.env.OPENAI_API_KEY ?? process.env.LITELLM_API_KEY;
