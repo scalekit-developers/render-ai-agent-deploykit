@@ -12,7 +12,7 @@ import {
   isConnected,
 } from "./session.js";
 import { renderHomePage } from "./views.js";
-import type { Request } from "express";
+import type { Request, Response } from "express";
 
 function summarizeIdentifier(identifier: string | undefined): string {
   if (!identifier) return "(none)";
@@ -148,6 +148,10 @@ export function startServer(): void {
 
   app.set("trust proxy", true);
   app.use(express.json());
+  app.get("/favicon.ico", (_req, res) => {
+    res.type("png").sendFile("favicon.png", { root: "public" });
+  });
+  app.use(express.static("public", { maxAge: "1d" }));
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
@@ -169,11 +173,12 @@ export function startServer(): void {
     const state = crypto.randomUUID();
     setPendingState(entry, state);
 
-    const userVerifyUrl = `${getRequestOrigin(req)}/user/verify`;
+    const origin = getRequestOrigin(req);
+    const userVerifyUrl = `${origin}/user/verify`;
 
     try {
       console.log(
-        `[auth:start] identifier=${summarizeIdentifier(identifier)} origin=${getRequestOrigin(req)}`,
+        `[auth:start] identifier=${summarizeIdentifier(identifier)} origin=${origin} userVerifyUrl=${userVerifyUrl}`,
       );
       const result = await setupGitHubAuthTask({ identifier, state, userVerifyUrl });
       res.json({ authLink: result.authLink });
@@ -187,7 +192,7 @@ export function startServer(): void {
 
   // OAuth callback — Scalekit redirects here after the user completes GitHub authorization.
   // Validates the state cookie to prevent CSRF, then activates the connected account.
-  app.get("/user/verify", async (req, res) => {
+  const handleUserVerify = async (req: Request, res: Response) => {
     const authRequestId = getSingleQueryParam(req.query.auth_request_id);
     const state = getSingleQueryParam(req.query.state);
     if (!authRequestId || !state) {
@@ -231,7 +236,9 @@ export function startServer(): void {
       );
       res.status(500).send(`Verification failed: ${msg}`);
     }
-  });
+  };
+
+  app.get(["/user/verify", "/user/verify/", "/user/verify/*"], handleUserVerify);
 
   // Step 2: Summarize the most-discussed PRs in a repository.
   // Reads the session identifier — no userId in the request body.
@@ -277,6 +284,11 @@ export function startServer(): void {
       );
       res.status(500).json({ error: formatSummarizeError(owner, repo, err) });
     }
+  });
+
+  app.use((req, res) => {
+    console.warn(`[http:not_found] method=${req.method} path=${req.originalUrl}`);
+    res.status(404).type("text").send(`Not found: ${req.method} ${req.originalUrl}`);
   });
 
   app.listen(PORT, () => {
