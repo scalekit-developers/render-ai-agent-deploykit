@@ -7,12 +7,28 @@ services:
     envVars:
       - key: PORT
         value: 3000
+
+      # LLM — set these three vars for your chosen provider.
+      #
+      # OpenAI direct:
+      #   OPENAI_API_KEY  = your OpenAI key (sk-...)
+      #   OPENAI_BASE_URL = (leave blank — delete the env var or set it to empty)
+      #   OPENAI_MODEL    = gpt-4.1-mini  (or any OpenAI model)
+      #
+      # LiteLLM proxy (or Azure OpenAI, Ollama, etc.):
+      #   OPENAI_API_KEY  = your proxy token
+      #   OPENAI_BASE_URL = https://your-litellm-proxy.example.com
+      #   OPENAI_MODEL    = claude-haiku-4-5  (or whichever model your proxy serves)
+      #
+      # Never set both an OpenAI key and a proxy URL at the same time —
+      # the key must match the endpoint it is sent to.
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_BASE_URL
         sync: false
       - key: OPENAI_MODEL
         value: gpt-4.1-mini
+
       - key: SCALEKIT_ENVIRONMENT_URL
         sync: false
       - key: SCALEKIT_CLIENT_ID
@@ -23,5 +39,9 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
+      # Optional — only needed if Render's proxy headers are unreliable.
+      # The app infers its public URL from x-forwarded-proto and host
+      # headers automatically, so you can leave this unset on first deploy
+      # and the OAuth callback will still work.
       - key: PUBLIC_BASE_URL
         sync: false

@@ -1,3 +1,36 @@
+export function renderAuthCompletePage(): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>GitHub Connected</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; margin: 0; background: #f5f5f5; color: #1a1a1a;
+    }
+    .box {
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+      padding: 2rem 2.5rem; text-align: center; max-width: 420px;
+    }
+    .check { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    h1 { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+    p { color: #555; font-size: 0.9rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="check">&#10003;</div>
+    <h1>GitHub connected</h1>
+    <p>You can close this tab and return to the app. The original page will update automatically.</p>
+  </div>
+</body>
+</html>`;
+}
+
 export function renderHomePage({ connected }: { connected: boolean }): string {
   const connectedBanner = connected
     ? `<div class="connected-banner">&#10003; GitHub connected — enter a repository below to summarize pull requests.</div>`
@@ -334,7 +367,7 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
         <li><strong>Where to find values:</strong> In the <a href="https://app.scalekit.com" target="_blank" rel="noopener noreferrer">Scalekit dashboard</a>, use your app credentials for <code>SCALEKIT_ENVIRONMENT_URL</code>, <code>SCALEKIT_CLIENT_ID</code>, and <code>SCALEKIT_CLIENT_SECRET</code>. Under <a href="https://docs.scalekit.com/agentkit/connectors/" target="_blank" rel="noopener noreferrer"><strong>AgentKit → Connectors</strong></a>, copy the GitHub connection name into <code>GITHUB_CONNECTION_NAME</code>.</li>
         <li><strong>LLM setup:</strong> Set <code>OPENAI_API_KEY</code> and <code>OPENAI_MODEL</code> to connect to any OpenAI-compatible API. Leave <code>OPENAI_BASE_URL</code> empty to use OpenAI directly (e.g. <code>OPENAI_MODEL=gpt-4.1-mini</code>). To use a LiteLLM proxy or another compatible endpoint, set <code>OPENAI_BASE_URL</code> to your proxy URL and <code>OPENAI_API_KEY</code> to your proxy token (e.g. <code>OPENAI_MODEL=claude-haiku-4-5</code>). Do not mix an OpenAI key with a proxy URL — the API key must match the endpoint.</li>
         <li><strong>GitHub OAuth callback:</strong> In GitHub's OAuth App settings, set <strong>Authorization callback URL</strong> to the <strong>Redirect URI</strong> shown on the Scalekit GitHub connection. Do not use this Render app's <code>/user/verify</code> URL there; this app passes <code>PUBLIC_BASE_URL/user/verify</code> to Scalekit as the second-hop verification callback.</li>
-        <li><strong>Session security:</strong> Generate a random <code>SESSION_SECRET</code> with <code>openssl rand -hex 32</code>. Set <code>PUBLIC_BASE_URL</code> to your service's public URL (e.g. <code>https://your-service.onrender.com</code>).</li>
+        <li><strong>Session security:</strong> Generate a random <code>SESSION_SECRET</code> with <code>openssl rand -hex 32</code>. <code>PUBLIC_BASE_URL</code> is optional — the app auto-detects its public URL from Render's proxy headers. You can set it after the first deploy if you prefer an explicit value.</li>
         <li><strong>On Render:</strong> <a href="https://dashboard.render.com" target="_blank" rel="noopener noreferrer">Dashboard</a> → your web service → <strong>Environment</strong> → add or edit each variable.</li>
         <li><strong>Blueprint (<code>render.yaml</code>):</strong> Variables are listed under <code>envVars</code>. Any entry with <code>sync: false</code> is a secret you enter at deploy time or in <strong>Environment</strong>; it is not stored in the repository.</li>
         <li><strong>Examples:</strong> Browse the <a href="https://docs.scalekit.com/agentkit/examples/" target="_blank" rel="noopener noreferrer">AgentKit examples</a>.</li>
@@ -419,6 +452,23 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       );
   }
 
+  let authPollTimer = null;
+
+  function startAuthPoll() {
+    if (authPollTimer) return;
+    authPollTimer = setInterval(async () => {
+      try {
+        const r = await fetch('/api/auth/status');
+        const d = await r.json();
+        if (d.connected) {
+          clearInterval(authPollTimer);
+          authPollTimer = null;
+          window.location.reload();
+        }
+      } catch {}
+    }, 2500);
+  }
+
   async function connectGitHub() {
     const resultEl = document.getElementById('auth-result');
     const btn = document.getElementById('auth-btn');
@@ -432,10 +482,13 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Request failed');
 
-      // Redirect the whole window through the OAuth flow.
-      // After authorization, Scalekit redirects back to /user/verify, which
-      // validates the session and then redirects to / with connected status.
-      window.location.href = data.authLink;
+      // Open OAuth flow in a new tab so this page stays intact.
+      // After the user authorizes, the new tab lands on /user/verify
+      // which shows a "close this tab" message. Meanwhile, we poll
+      // /api/auth/status and auto-reload once the session is connected.
+      window.open(data.authLink, '_blank');
+      resultEl.innerHTML = '<div style="color:#555;font-size:0.88rem;margin-top:0.5rem">Waiting for GitHub authorization&hellip; complete the flow in the new tab.</div>';
+      startAuthPoll();
     } catch (err) {
       resultEl.innerHTML = \`<div class="error-box" style="margin-top:1rem">\${renderErrorHtml(err.message)}</div>\`;
       btn.disabled = false;

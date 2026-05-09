@@ -11,7 +11,7 @@ import {
   markConnected,
   isConnected,
 } from "./session.js";
-import { renderHomePage } from "./views.js";
+import { renderHomePage, renderAuthCompletePage } from "./views.js";
 import type { Request, Response } from "express";
 
 function summarizeIdentifier(identifier: string | undefined): string {
@@ -163,6 +163,12 @@ export function startServer(): void {
     res.type("html").send(renderHomePage({ connected: isConnected(entry) }));
   });
 
+  // Auth status — polled by the original tab while the OAuth tab is open.
+  app.get("/api/auth/status", (req, res) => {
+    const { entry } = requireSession(req, res);
+    res.json({ connected: isConnected(entry) });
+  });
+
   // Step 1: Generate a GitHub OAuth link for this session.
   // No user input required — the identifier is minted server-side.
   app.post("/api/auth", async (req, res) => {
@@ -225,10 +231,10 @@ export function startServer(): void {
       console.log(
         `[auth:verify:success] identifier=${summarizeIdentifier(entry.identifier)}`,
       );
-      // Keep the browser inside the app after successful verification.
-      // Scalekit may return its own hosted success page URL, but this sample
-      // should land the user back on the local session-bound UI.
-      res.redirect("/");
+      // This handler runs in the OAuth tab/popup. Render a minimal page
+      // telling the user to close it. The original tab is polling
+      // /api/auth/status and will auto-reload once it sees connected=true.
+      res.type("html").send(renderAuthCompletePage());
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(
