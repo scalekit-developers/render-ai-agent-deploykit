@@ -353,6 +353,23 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
 
   ${connectedBanner}
 
+  <details class="card card-collapsible" style="margin-bottom:1rem">
+    <summary>
+      <span class="collapsible-summary-text">
+        <strong>Scalekit setup (required)</strong>
+        <span class="collapsible-summary-hint">GitHub connector &amp; user verification — click to expand</span>
+      </span>
+      <span class="collapsible-chevron" aria-hidden="true">&#9654;</span>
+    </summary>
+    <div class="collapsible-body">
+      <p class="subtitle">Complete these steps in the <a href="https://app.scalekit.com" target="_blank" rel="noopener noreferrer">Scalekit dashboard</a> before using this app.</p>
+      <ul class="help-list">
+        <li><strong>GitHub connector:</strong> Go to <strong>AgentKit → Connectors</strong>, add a <strong>GitHub</strong> connector, and copy the connection name into <code>GITHUB_CONNECTION_NAME</code>. In GitHub's OAuth App settings, set <strong>Authorization callback URL</strong> to the <strong>Redirect URI</strong> shown on the Scalekit connection — not this app's URL.</li>
+        <li><strong>User verification (most common setup issue):</strong> Go to <a href="https://docs.scalekit.com/agentkit/user-verification/" target="_blank" rel="noopener noreferrer"><strong>AgentKit → Settings → User verification</strong></a> and choose a mode. Use <strong>Scalekit users only</strong> for development/testing (Scalekit verifies internally, account goes active automatically). Use <strong>Custom user verification</strong> for production (Scalekit redirects to this app's callback). The app works in both modes. <em>If you skip this step, the app will stay stuck on "Waiting for GitHub authorization" after OAuth completes.</em></li>
+      </ul>
+    </div>
+  </details>
+
   <details class="card card-collapsible" style="margin-bottom:1.5rem">
     <summary>
       <span class="collapsible-summary-text">
@@ -362,14 +379,13 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       <span class="collapsible-chevron" aria-hidden="true">&#9654;</span>
     </summary>
     <div class="collapsible-body">
-      <p class="subtitle">The API needs Scalekit and OpenAI settings. Configure them on Render (or in a local <code>.env</code> for development).</p>
+      <p class="subtitle">Configure these on Render (or in a local <code>.env</code> for development).</p>
       <ul class="help-list">
-        <li><strong>Where to find values:</strong> In the <a href="https://app.scalekit.com" target="_blank" rel="noopener noreferrer">Scalekit dashboard</a>, use your app credentials for <code>SCALEKIT_ENVIRONMENT_URL</code>, <code>SCALEKIT_CLIENT_ID</code>, and <code>SCALEKIT_CLIENT_SECRET</code>. Under <a href="https://docs.scalekit.com/agentkit/connectors/" target="_blank" rel="noopener noreferrer"><strong>AgentKit → Connectors</strong></a>, copy the GitHub connection name into <code>GITHUB_CONNECTION_NAME</code>.</li>
-        <li><strong>LLM setup:</strong> Set <code>OPENAI_API_KEY</code> and <code>OPENAI_MODEL</code> to connect to any OpenAI-compatible API. Leave <code>OPENAI_BASE_URL</code> empty to use OpenAI directly (e.g. <code>OPENAI_MODEL=gpt-4.1-mini</code>). To use a LiteLLM proxy or another compatible endpoint, set <code>OPENAI_BASE_URL</code> to your proxy URL and <code>OPENAI_API_KEY</code> to your proxy token (e.g. <code>OPENAI_MODEL=claude-haiku-4-5</code>). Do not mix an OpenAI key with a proxy URL — the API key must match the endpoint.</li>
-        <li><strong>GitHub OAuth callback:</strong> In GitHub's OAuth App settings, set <strong>Authorization callback URL</strong> to the <strong>Redirect URI</strong> shown on the Scalekit GitHub connection. Do not use this Render app's <code>/user/verify</code> URL there; this app passes <code>PUBLIC_BASE_URL/user/verify</code> to Scalekit as the second-hop verification callback.</li>
-        <li><strong>Session security:</strong> Generate a random <code>SESSION_SECRET</code> with <code>openssl rand -hex 32</code>. <code>PUBLIC_BASE_URL</code> is optional — the app auto-detects its public URL from Render's proxy headers. You can set it after the first deploy if you prefer an explicit value.</li>
+        <li><strong>Scalekit credentials:</strong> In the <a href="https://app.scalekit.com" target="_blank" rel="noopener noreferrer">Scalekit dashboard</a> → <strong>Developers → API Credentials</strong>, copy <code>SCALEKIT_ENVIRONMENT_URL</code>, <code>SCALEKIT_CLIENT_ID</code>, and <code>SCALEKIT_CLIENT_SECRET</code>.</li>
+        <li><strong>LLM setup:</strong> Set <code>OPENAI_API_KEY</code> and <code>OPENAI_MODEL</code> to connect to any OpenAI-compatible API. Leave <code>OPENAI_BASE_URL</code> empty to use OpenAI directly. To use a LiteLLM proxy or another compatible endpoint, set <code>OPENAI_BASE_URL</code> to your proxy URL and <code>OPENAI_API_KEY</code> to your proxy token. The API key must match the endpoint.</li>
+        <li><strong>Session security:</strong> Generate a random <code>SESSION_SECRET</code> with <code>openssl rand -hex 32</code>. On Render, <code>render.yaml</code> auto-generates this for you.</li>
+        <li><strong>PUBLIC_BASE_URL (optional):</strong> The app auto-detects its public URL from Render's proxy headers. Only set this if you are behind a custom domain or an unusual reverse proxy.</li>
         <li><strong>On Render:</strong> <a href="https://dashboard.render.com" target="_blank" rel="noopener noreferrer">Dashboard</a> → your web service → <strong>Environment</strong> → add or edit each variable.</li>
-        <li><strong>Blueprint (<code>render.yaml</code>):</strong> Variables are listed under <code>envVars</code>. Any entry with <code>sync: false</code> is a secret you enter at deploy time or in <strong>Environment</strong>; it is not stored in the repository.</li>
         <li><strong>Examples:</strong> Browse the <a href="https://docs.scalekit.com/agentkit/examples/" target="_blank" rel="noopener noreferrer">AgentKit examples</a>.</li>
       </ul>
     </div>
