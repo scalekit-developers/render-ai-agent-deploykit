@@ -1,6 +1,8 @@
 # Multi-user GitHub PR summarizer agent
 
 > 📖 **Cookbook:** [Build a multi-user GitHub PR summarizer agent](https://docs.scalekit.com/cookbooks/render-github-pr-summarizer/)
+>
+> 🎬 **Video walkthrough:** [Watch the setup demo on YouTube](https://youtu.be/w3atzSkKE1w)
 
 This sample shows how to build a GitHub PR summarizer where each browser session connects its own GitHub account once, then uses that connected token for later tool calls. The server never asks the browser for a `userId`.
 

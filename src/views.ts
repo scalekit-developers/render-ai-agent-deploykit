@@ -348,6 +348,8 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       <a href="https://docs.scalekit.com/cookbooks/render-github-pr-summarizer/" target="_blank" rel="noopener noreferrer">Scalekit cookbook</a>
       <span class="header-links-sep" aria-hidden="true">·</span>
       <a href="https://docs.scalekit.com/" target="_blank" rel="noopener noreferrer">Scalekit docs</a>
+      <span class="header-links-sep" aria-hidden="true">·</span>
+      <a href="https://youtu.be/w3atzSkKE1w" target="_blank" rel="noopener noreferrer">Video walkthrough</a>
     </p>
   </header>
 
