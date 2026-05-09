@@ -18,10 +18,13 @@ See [User verification for connected accounts](https://docs.scalekit.com/agentki
 
 1. A browser visits `/` and receives a signed, HTTP-only session cookie.
 2. The server mints an opaque identifier such as `usr_...` for that session.
-3. `POST /api/auth` creates a GitHub auth link with a one-time `state` and a `userVerifyUrl`.
-4. After GitHub OAuth completes, Scalekit redirects the browser to `/user/verify`.
-5. The server validates `state`, calls `verifyConnectedAccountUser`, marks the session connected, and redirects back to `/`.
-6. `POST /api/summarize` reads the identifier from the session and runs GitHub tool calls on behalf of that connected account.
+3. `POST /api/auth` creates a GitHub auth link via Scalekit.
+4. The browser opens the auth link in a **new tab**. The user completes GitHub OAuth there.
+5. The original tab polls `GET /api/auth/status`, which queries Scalekit's API to check when the connected account becomes `ACTIVE`.
+6. Once active, the original tab auto-reloads and shows a **GitHub connected** banner.
+7. `POST /api/summarize` reads the identifier from the session and runs GitHub tool calls on behalf of that connected account.
+
+The app also supports Scalekit's [custom user verification](https://docs.scalekit.com/agentkit/user-verification/) callback flow. When that mode is enabled in the dashboard, Scalekit redirects the OAuth tab to `/user/verify` after authorization completes, and the server calls `verifyConnectedAccountUser` before marking the session connected. Both detection paths (API polling and callback) work in parallel — whichever fires first wins.
 
 ## Web UI
 
@@ -29,10 +32,10 @@ The app serves a browser UI at `http://localhost:3000` in development or at your
 
 The UI has two steps:
 
-1. **Connect GitHub**. Click **Connect GitHub** and complete the OAuth flow in the same browser session.
+1. **Connect GitHub**. Click **Connect GitHub**. A new tab opens for the GitHub OAuth flow. The original tab waits and auto-reloads when the connection is active.
 2. **Summarize pull requests**. Paste a GitHub repository URL or enter `owner/repo`, then generate summaries.
 
-When the callback succeeds, the page shows a **GitHub connected** banner. There is no user ID field anywhere in the UI.
+When the connection succeeds, the page shows a **GitHub connected** banner. There is no user ID field anywhere in the UI.
 
 ## HTTP API
 
@@ -41,19 +44,18 @@ When the callback succeeds, the page shows a **GitHub connected** banner. There 
 Starts the GitHub connection flow for the current browser session.
 
 - No request body
-- Browser-driven flow
 - Returns `{ "authLink": "https://..." }`
+- The browser opens `authLink` in a new tab for the user to complete OAuth
 
-This endpoint is only useful from a browser session because the callback relies on the signed session cookie.
+### `GET /api/auth/status`
+
+Returns `{ "connected": true | false }` for the current session. The frontend polls this endpoint after opening the OAuth tab. It checks the in-memory session first, then queries the Scalekit API for the connected account's status.
 
 ### `GET /user/verify`
 
-Completes the connected-account verification flow after Scalekit redirects back with `auth_request_id` and `state`.
+Optional callback for [custom user verification](https://docs.scalekit.com/agentkit/user-verification/) mode. When enabled in the Scalekit dashboard, Scalekit redirects here after OAuth with `auth_request_id` and `state`. The server validates the state, calls `verifyConnectedAccountUser`, and marks the session connected.
 
-- Validates the one-time `state`
-- Calls `verifyConnectedAccountUser`
-- Marks the session as connected
-- Redirects back to `/`
+This callback is not required for the app to work — the `/api/auth/status` polling detects completion via the Scalekit API regardless of verification mode.
 
 ### `POST /api/summarize`
 
@@ -81,22 +83,22 @@ If the session has not connected GitHub yet, the server returns `401`.
 1. Open [app.scalekit.com](https://app.scalekit.com) and go to **AgentKit > Connectors**
 2. Add a **GitHub** connector
 3. Copy the **Redirect URI** shown by Scalekit for this GitHub connection
-4. In GitHub's OAuth App settings, set **Authorization callback URL** to that Scalekit Redirect URI
+4. In GitHub's OAuth App settings, set **Authorization callback URL** to that Scalekit Redirect URI — **not** your Render app's URL
 5. Finish the connector setup
 6. Copy the generated connection name into `GITHUB_CONNECTION_NAME`
 
-Do not set GitHub's OAuth App callback to your Render service URL. `PUBLIC_BASE_URL/user/verify` is the callback Scalekit uses after GitHub OAuth completes; GitHub itself must redirect back to Scalekit's connection Redirect URI.
+### 2. Configure user verification (required)
 
-### 2. Enable custom user verification
+Scalekit's user verification setting controls what happens after a user completes GitHub OAuth. **You must choose a mode in the dashboard before the app will work end-to-end.** Go to **AgentKit > Settings > User verification** in the [Scalekit dashboard](https://app.scalekit.com).
 
-This sample uses the secure connected-account verification flow from Scalekit's docs.
+| Mode | When to use | What happens after OAuth |
+|------|-------------|--------------------------|
+| **Scalekit users only** | Development and testing | Scalekit verifies the user internally. The connected account goes `ACTIVE` automatically. The app detects this by polling the Scalekit API. |
+| **Custom user verification** | Production | Scalekit redirects the browser to your app's `/user/verify` callback. The server calls `verifyConnectedAccountUser` to activate the account. The app also polls the Scalekit API as a fallback. |
 
-1. In the Scalekit Dashboard, go to **AgentKit > Settings > User verification** and set it to **Custom user verification**
-2. Set `PUBLIC_BASE_URL` if you want to pin the callback origin explicitly
-3. If `PUBLIC_BASE_URL` is unset, the app falls back to the incoming request origin
-4. The app sends `${PUBLIC_BASE_URL}/user/verify` as `userVerifyUrl` when it creates the GitHub auth link when that variable is set
+The app works in **both modes** without code changes. If you skip this step entirely, the connected account may never reach `ACTIVE` status and the app will stay stuck on "Waiting for GitHub authorization."
 
-If GitHub shows a 404 or redirect error before this app logs `[auth:verify:start]`, check the GitHub OAuth App callback URL first. It should exactly match the Scalekit connection Redirect URI, including protocol, path, and any trailing slash.
+For the custom verification flow details, see [User verification for connected accounts](https://docs.scalekit.com/agentkit/user-verification/).
 
 ### 3. Configure local environment variables
 
@@ -110,8 +112,8 @@ Fill in `.env` with your Scalekit and LLM settings.
 Important variables:
 
 - `SESSION_SECRET`: generate with `openssl rand -hex 32`
-- `PUBLIC_BASE_URL`: optional override for the callback origin; set it to `http://localhost:3000` locally or your public Render URL in production if you want to pin the callback URL explicitly
 - `GITHUB_CONNECTION_NAME`: copy from the Scalekit dashboard
+- `PUBLIC_BASE_URL`: **optional** — the app auto-detects its public URL from proxy headers on Render. Only set this if you need to pin the callback origin explicitly (e.g. behind a custom domain or an unusual reverse proxy)
 
 **LLM configuration** — the app accepts any OpenAI-compatible API. Pick the row that matches your setup:
 
@@ -141,31 +143,36 @@ Public repositories work with any connected GitHub account. Private repositories
 
 Render reads `render.yaml` and creates a Node web service. Set the required secrets in the Render dashboard:
 
-- `OPENAI_API_KEY`
-- `SCALEKIT_ENVIRONMENT_URL`
-- `SCALEKIT_CLIENT_ID`
-- `SCALEKIT_CLIENT_SECRET`
-- `GITHUB_CONNECTION_NAME`
-- `SESSION_SECRET`
-- `PUBLIC_BASE_URL`
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `SCALEKIT_ENVIRONMENT_URL` | Yes | From Scalekit dashboard → Developers → API Credentials |
+| `SCALEKIT_CLIENT_ID` | Yes | Same location |
+| `SCALEKIT_CLIENT_SECRET` | Yes | Same location |
+| `GITHUB_CONNECTION_NAME` | Yes | From AgentKit → Connectors |
+| `OPENAI_API_KEY` | Yes | OpenAI key or proxy token |
+| `SESSION_SECRET` | Auto | `render.yaml` auto-generates this |
+| `PUBLIC_BASE_URL` | No | Auto-detected from proxy headers. Only set if using a custom domain. |
 
-When `PUBLIC_BASE_URL` is set, use the exact public URL of the deployed service, for example `https://your-service.onrender.com`.
-
-If `PUBLIC_BASE_URL` is omitted, the app falls back to the incoming request origin for the OAuth callback URL. When you deploy from the included `render.yaml`, Render auto-generates `SESSION_SECRET` for you.
+After deploying, configure user verification in the Scalekit dashboard (see [step 2](#2-configure-user-verification-required) above). The app will not complete the GitHub connection flow without this.
 
 ## Architecture
 
 ```text
-Browser
+Browser (original tab)                  Browser (new tab)
+  │                                       │
+  ▼ GET /                                 │
+Express server                            │
+  │ issues signed session cookie          │
+  ▼ POST /api/auth                        │
+Scalekit connected account + auth link    │
+  │                                       │
+  │  opens auth link ─────────────────►   ▼
+  │                                     GitHub OAuth consent
+  │                                       │
+  │  polls GET /api/auth/status           ▼
+  │  ◄─── Scalekit API: ACTIVE ──►  Scalekit verifies account
   │
-  ▼ GET /
-Express server
-  │ issues signed HTTP-only session cookie
-  ▼ POST /api/auth
-Scalekit connected account + auth link
-  │
-  ▼ GET /user/verify?auth_request_id=...&state=...
-Express server validates state and calls verifyConnectedAccountUser
+  ▼ page auto-reloads
   │
   ▼ POST /api/summarize { repository }
 Render tasks + Scalekit GitHub connector + LLM
@@ -185,8 +192,9 @@ Render tasks + Scalekit GitHub connector + LLM
 
 - The sample stores sessions in memory. Use Redis or a database-backed shared session store in production.
 - The signed cookie detects tampering. The actual identifier stays server-side in the session store.
-- The `state` value is single-use and expires after 10 minutes.
+- When custom user verification is enabled, the `state` value is single-use and expires after 10 minutes.
 - The app requires the connected GitHub token to have access to the target repository.
+- Switch to **Custom user verification** in the Scalekit dashboard before going to production. See [User verification for connected accounts](https://docs.scalekit.com/agentkit/user-verification/).
 
 ## Resources
 
