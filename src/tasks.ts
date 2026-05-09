@@ -191,9 +191,10 @@ const generateSummary = task(
 
 /**
  * One-time setup: create or retrieve the GitHub connected account for a user
- * and return the OAuth authorization URL. The user must open the URL and
- * authorize GitHub access. After authorization, Scalekit redirects to
- * userVerifyUrl where the server binds the token to the session.
+ * and return the OAuth authorization URL. The user opens the URL and
+ * authorizes GitHub access. In production (custom verification mode),
+ * Scalekit redirects to userVerifyUrl after OAuth. In dev mode, the app
+ * detects completion by polling /api/auth/status → Scalekit API.
  */
 export const setupGitHubAuthTask = task(
   { name: "setupGitHubAuth" },

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import express from "express";
 import { setupGitHubAuthTask, summarizePRsTask } from "./tasks.js";
-import { verifyUser } from "./scalekit.js";
+import { isAccountActive, verifyUser } from "./scalekit.js";
 import {
   assertSessionSecretConfigured,
   requireSession,
@@ -164,9 +164,20 @@ export function startServer(): void {
   });
 
   // Auth status — polled by the original tab while the OAuth tab is open.
-  app.get("/api/auth/status", (req, res) => {
+  // Checks the in-memory session first, then falls back to Scalekit's API
+  // to detect when the connected account becomes active.
+  app.get("/api/auth/status", async (req, res) => {
     const { entry } = requireSession(req, res);
-    res.json({ connected: isConnected(entry) });
+    if (isConnected(entry)) {
+      res.json({ connected: true });
+      return;
+    }
+    if (entry.identifier && await isAccountActive(entry.identifier)) {
+      markConnected(entry);
+      res.json({ connected: true });
+      return;
+    }
+    res.json({ connected: false });
   });
 
   // Step 1: Generate a GitHub OAuth link for this session.

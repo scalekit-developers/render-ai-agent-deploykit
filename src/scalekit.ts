@@ -71,10 +71,13 @@ export async function githubTool(
 
 /**
  * Create or retrieve the connected account for a user, then return a GitHub
- * OAuth authorization link. After OAuth completes, Scalekit redirects the
- * browser to userVerifyUrl so the app can bind the token to the session
- * via verifyUser(). The state value is passed through and must be validated
- * at the callback to prevent CSRF.
+ * OAuth authorization link.
+ *
+ * When Scalekit is in "Custom user verification" mode (production), it
+ * redirects the browser to userVerifyUrl after OAuth so the app can call
+ * verifyUser(). In "Scalekit users only" dev mode, Scalekit handles
+ * verification internally and the redirect may not fire — the app detects
+ * completion by polling isAccountActive() instead.
  */
 export async function getGitHubAuthLink(
   identifier: string,
@@ -116,6 +119,27 @@ export async function verifyUser(params: {
   console.log(
     `[verifyUser:success] identifier=${summarizeIdentifier(params.identifier)} authRequestId=${params.authRequestId}`,
   );
+}
+
+/**
+ * Check the connected account status via Scalekit API.
+ * Returns true when the account is active (OAuth complete and verified).
+ */
+export async function isAccountActive(identifier: string): Promise<boolean> {
+  try {
+    const res = await scalekit.actions.getConnectedAccount({
+      connectionName: GITHUB_CONNECTION_NAME,
+      identifier,
+    });
+    const status = res.connectedAccount?.status;
+    console.log(
+      `[isAccountActive] identifier=${summarizeIdentifier(identifier)} status=${status}`,
+    );
+    // ConnectorStatus.ACTIVE === 1
+    return status === 1;
+  } catch {
+    return false;
+  }
 }
 
 /**
