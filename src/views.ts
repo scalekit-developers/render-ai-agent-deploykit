@@ -360,7 +360,7 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       min-height: var(--target);
       min-width: var(--target);
       padding: 0.6rem 1.1rem;
-      border-radius: 999px;
+      border-radius: 0;
       font-size: 0.9rem;
       font-weight: 600;
       font-family: inherit;
