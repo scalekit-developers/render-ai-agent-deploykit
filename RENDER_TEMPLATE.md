@@ -53,7 +53,7 @@ Scalekit GitHub connector fetches PR data with connected user's token
 | `GITHUB_CONNECTION_NAME` | No* | From AgentKit → Connectors. Defaults to `github-qkHFhMip` (sampleapps Render demo) |
 | `OPENAI_API_KEY` | Yes | OpenAI **project** key or proxy token (see least privilege below) |
 | `OPENAI_BASE_URL` | No | Leave empty for OpenAI direct. Set to proxy URL for LiteLLM, Azure, etc. |
-| `OPENAI_MODEL` | No | Default: `gpt-4.1-mini`. Higher quality: `gpt-4.1` |
+| `OPENAI_MODEL` | No | Default: `gpt-5-mini`. Higher quality: `gpt-5.6-terra` / `gpt-5.6-sol` |
 | `SESSION_SECRET` | Auto | `render.yaml` auto-generates this. Or generate with `openssl rand -hex 32`. |
 | `PUBLIC_BASE_URL` | No | Auto-detected from proxy headers. Only needed behind a custom domain. |
 
@@ -61,9 +61,9 @@ The app accepts any OpenAI-compatible API:
 
 | | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `OPENAI_MODEL` |
 |---|---|---|---|
-| **OpenAI direct** | project key (`sk-proj-...` / `sk-...`) | *(leave empty)* | `gpt-4.1-mini` |
-| **OpenAI higher quality** | same | *(leave empty)* | `gpt-4.1` |
-| **LiteLLM proxy** | your proxy token | proxy URL (e.g. `https://llm.example.com`) | any model the proxy serves (e.g. `claude-haiku-4-5`) |
+| **OpenAI direct** | project key (`sk-proj-...`) | *(leave empty / unset)* | `gpt-5-mini` |
+| **OpenAI higher quality** | same | *(leave empty / unset)* | `gpt-5.6-terra` or `gpt-5.6-sol` |
+| **LiteLLM proxy** | LiteLLM virtual key | proxy URL **with `/v1`** (e.g. `https://llm.example.com/v1`) | any model the proxy serves (e.g. `claude-haiku-4-5`) |
 | **Azure / Ollama / other** | your key or token | your endpoint URL | your model name |
 
 ### OpenAI key least privilege

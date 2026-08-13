@@ -11,14 +11,14 @@ services:
       # LLM — set these three vars for your chosen provider.
       #
       # OpenAI direct:
-      #   OPENAI_API_KEY  = your OpenAI key (sk-...)
+      #   OPENAI_API_KEY  = your OpenAI project key (sk-proj-...)
       #   OPENAI_BASE_URL = (leave blank — delete the env var or set it to empty)
-      #   OPENAI_MODEL    = gpt-4.1-mini  (or any OpenAI model)
+      #   OPENAI_MODEL    = gpt-5-mini  (or gpt-5.6-terra / gpt-5.6-sol)
       #
       # LiteLLM proxy (or Azure OpenAI, Ollama, etc.):
-      #   OPENAI_API_KEY  = your proxy token
-      #   OPENAI_BASE_URL = https://your-litellm-proxy.example.com
-      #   OPENAI_MODEL    = claude-haiku-4-5  (or whichever model your proxy serves)
+      #   OPENAI_API_KEY  = your LiteLLM virtual key
+      #   OPENAI_BASE_URL = https://your-litellm-proxy.example.com/v1
+      #   OPENAI_MODEL    = claude-haiku-4-5  (or any id from GET /v1/models)
       #
       # Never set both an OpenAI key and a proxy URL at the same time —
       # the key must match the endpoint it is sent to.
@@ -27,7 +27,7 @@ services:
       - key: OPENAI_BASE_URL
         sync: false
       - key: OPENAI_MODEL
-        value: gpt-4.1-mini
+        value: gpt-5-mini
 
       - key: SCALEKIT_ENVIRONMENT_URL
         sync: false

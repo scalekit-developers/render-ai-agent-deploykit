@@ -760,7 +760,7 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       <p class="subtitle">Configure these on Render (or in a local <code>.env</code> for development). See the README for least-privilege OpenAI key setup.</p>
       <ul class="help-list">
         <li><strong>Scalekit credentials:</strong> Dashboard → <strong>Developers → API Credentials</strong> for <code>SCALEKIT_ENVIRONMENT_URL</code>, <code>SCALEKIT_CLIENT_ID</code>, and <code>SCALEKIT_CLIENT_SECRET</code>.</li>
-        <li><strong>LLM setup:</strong> Set <code>OPENAI_API_KEY</code> and <code>OPENAI_MODEL</code> (default <code>gpt-4.1-mini</code>). Leave <code>OPENAI_BASE_URL</code> empty for OpenAI direct. For a proxy, set <code>OPENAI_BASE_URL</code> and use the proxy token as the key.</li>
+        <li><strong>LLM setup:</strong> Set <code>OPENAI_API_KEY</code> and <code>OPENAI_MODEL</code> (default <code>gpt-5-mini</code>). Leave <code>OPENAI_BASE_URL</code> empty for OpenAI direct. For LiteLLM, set <code>OPENAI_BASE_URL</code> to the proxy URL including <code>/v1</code> and use a virtual key as the API key; pick a model from <code>GET /v1/models</code>.</li>
         <li><strong>OpenAI key scope:</strong> Use a project key with <strong>Restricted</strong> permissions. This app only needs chat/model inference — leave Assistants, Fine-tuning, Files, etc. disabled.</li>
         <li><strong>Session security:</strong> Generate <code>SESSION_SECRET</code> with <code>openssl rand -hex 32</code>. On Render, <code>render.yaml</code> auto-generates this.</li>
         <li><strong>PUBLIC_BASE_URL (optional):</strong> Auto-detected from Render proxy headers. Only set for a custom domain or unusual reverse proxy.</li>

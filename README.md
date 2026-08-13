@@ -74,8 +74,8 @@ npm install
 | `SCALEKIT_CLIENT_SECRET` | Same |
 | `GITHUB_CONNECTION_NAME` | Scalekit → **AgentKit → Connectors** (connection name). Optional; defaults to `github-qkHFhMip` for the sampleapps Render demo env |
 | `OPENAI_API_KEY` | OpenAI project key (or OpenAI-compatible proxy token) — see [least privilege](#openai-api-key-least-privilege) |
-| `OPENAI_MODEL` | Chat model id (default `gpt-4.1-mini`) |
-| `OPENAI_BASE_URL` | Optional. Empty = OpenAI direct. Set for LiteLLM / Azure / other OpenAI-compatible APIs |
+| `OPENAI_MODEL` | Chat model id (default `gpt-5-mini`) |
+| `OPENAI_BASE_URL` | Optional. Empty = OpenAI direct. For LiteLLM use the proxy base including `/v1` (e.g. `https://llm.example.com/v1`) |
 | `SESSION_SECRET` | `openssl rand -hex 32` (Render auto-generates via `render.yaml`) |
 | `PUBLIC_BASE_URL` | Optional. Auto-detected on Render; set only for custom domains / unusual proxies |
 | `PORT` | Optional. Default `3000` |
@@ -117,24 +117,27 @@ npm run dev
 
 ## LLM models (current defaults)
 
-This app only needs **chat completions** (plain text in → summary out). Defaults:
+This app only needs **chat completions** (plain text in → summary out). Recommended ids as of 2026 (OpenAI API):
 
-| Setting | Recommended |
-|---------|-------------|
-| Default model | `gpt-4.1-mini` — fast, low cost, good for demos |
-| Higher quality | `gpt-4.1` — better long-diff reasoning; higher cost |
-| Via LiteLLM / proxy | Any chat model your proxy exposes (example: `claude-haiku-4-5`) |
+| Setting | Recommended model id | Notes |
+|---------|----------------------|--------|
+| Default (demos / low cost) | `gpt-5-mini` | Fast, cheap; good default for this template |
+| Balanced / production | `gpt-5.6-terra` | Strong quality vs cost for longer PR diffs |
+| Highest quality | `gpt-5.6-sol` | Frontier reasoning; highest cost |
+| Via LiteLLM / proxy | Whatever your proxy lists | e.g. `claude-haiku-4-5`, `claude-sonnet-4-5` — call `GET /v1/models` with your virtual key |
 
 Examples:
 
 | | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `OPENAI_MODEL` |
 |---|---|---|---|
-| **OpenAI direct** | Project key (`sk-...` / `sk-proj-...`) | *(leave empty)* | `gpt-4.1-mini` |
-| **OpenAI higher quality** | Same | *(leave empty)* | `gpt-4.1` |
-| **LiteLLM proxy** | Proxy token | `https://your-proxy.example.com` | e.g. `claude-haiku-4-5` |
-| **Azure / Ollama / other** | Key or token for that endpoint | Endpoint base URL | That endpoint’s model name |
+| **OpenAI direct** | Project key (`sk-proj-...`) | *(leave empty / unset)* | `gpt-5-mini` |
+| **OpenAI higher quality** | Same | *(leave empty / unset)* | `gpt-5.6-terra` or `gpt-5.6-sol` |
+| **LiteLLM proxy** | LiteLLM **virtual key** (not a raw OpenAI key unless registered on the proxy) | `https://your-proxy.example.com/v1` | e.g. `claude-haiku-4-5` |
+| **Azure / Ollama / other** | Key or token for that endpoint | Endpoint base URL (include `/v1` if required) | That endpoint’s model name |
 
-Model IDs change over time — confirm the latest names in the [OpenAI model docs](https://platform.openai.com/docs/models) (or your proxy’s catalog) before production.
+**LiteLLM vs OpenAI:** if `OPENAI_BASE_URL` is set, the key is sent only to that host. Use a proxy virtual key + a model id from that proxy’s catalog. Do not mix an OpenAI `sk-proj-` key with a LiteLLM base URL unless the proxy is configured to accept it.
+
+Model IDs change over time — confirm the latest names in the [OpenAI model docs](https://platform.openai.com/docs/models) (or `GET {OPENAI_BASE_URL}/models` on your proxy) before production.
 
 ---
 
@@ -149,7 +152,7 @@ Recommended setup on [platform.openai.com](https://platform.openai.com):
 3. When creating/editing the key, set permissions to **Restricted** (not “All”).
 4. Grant **Write** only where required for model inference / chat completions (endpoint labels vary slightly in the dashboard; if chat fails with a missing-scope error, enable the **Model** / **model.request** capability the UI surfaces).
 5. Leave unused capabilities (Assistants, Fine-tuning, Files, Vector stores, etc.) at **None**.
-6. Optionally restrict the **project’s allowed models** to the ids you set in `OPENAI_MODEL` (for example only `gpt-4.1-mini` and `gpt-4.1`).
+6. Optionally restrict the **project’s allowed models** to the ids you set in `OPENAI_MODEL` (for example only `gpt-5-mini` and `gpt-5.6-terra`).
 7. Prefer spend limits / rate limits on the project for demos.
 
 If you set `OPENAI_BASE_URL` to a proxy (LiteLLM, Azure, gateway), the key you put in `OPENAI_API_KEY` is the **proxy** credential — apply least privilege on that system instead of (or in addition to) OpenAI’s dashboard.
