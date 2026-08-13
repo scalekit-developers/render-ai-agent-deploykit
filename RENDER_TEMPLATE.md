@@ -68,18 +68,17 @@ The app accepts any OpenAI-compatible API:
 
 ### OpenAI key least privilege (scope permissions)
 
-This app only calls **chat completions**. Scope the key so a leak cannot use Assistants, fine-tuning, files, or org admin.
+This app only calls **chat completions**. On [platform.openai.com](https://platform.openai.com) → create a **project** key → **Restricted**:
 
-On [platform.openai.com](https://platform.openai.com):
+| Row | Value |
+|-----|--------|
+| **Model capabilities** | **Write** (required) |
+| **List models** | **Read** (optional) or **None** |
+| Assistants, Threads, Evals, Fine-tuning, Files, Videos, Vector stores, Prompts, Batch, Tunnels, Datasets | **None** |
 
-1. Create a dedicated **project** and **project secret key** (not a broad user key)
-2. Set key permissions to **Restricted** (not All)
-3. Grant **Write** only for model / chat inference (`model.request` / Models write)
-4. Leave Assistants, Fine-tuning, Files, Batch, Images, Audio, Vector stores at **None**
-5. Optionally allow only the model ids you set in `OPENAI_MODEL`
-6. Set a project spend limit for demos
+Also set a project spend limit and, if available, allow only the model ids in `OPENAI_MODEL`.
 
-Full tables and a checklist: see the repo README section **OpenAI API key — scope permissions (least privilege)**.
+Full table + checklist: README **OpenAI API key — scope permissions (least privilege)**.
 
 ## Setup order (Scalekit ↔ GitHub ↔ Render)
 
