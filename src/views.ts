@@ -24,7 +24,7 @@ export function renderAuthCompletePage(): string {
       --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       --radius: 8px;
       --shadow: 0 1px 2px oklch(22% 0.02 255 / 0.06);
-      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
       --dur-short: 150ms;
     }
     * { box-sizing: border-box; }
@@ -59,6 +59,15 @@ export function renderAuthCompletePage(): string {
       font-size: 1rem;
       font-weight: 700;
       margin-bottom: 0.85rem;
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+    }
+    @starting-style {
+      .badge {
+        opacity: 0;
+        transform: scale(0.95);
+      }
     }
     h1 {
       font-size: 1.2rem;
@@ -70,6 +79,10 @@ export function renderAuthCompletePage(): string {
     }
     p { color: var(--color-muted); font-size: 0.94rem; line-height: 1.55; margin: 0; text-wrap: pretty; }
     ::selection { background: oklch(52% 0.16 255 / 0.18); color: var(--color-ink); }
+    @media (prefers-reduced-motion: reduce) {
+      .badge { transition: none; }
+      @starting-style { .badge { opacity: 1; transform: none; } }
+    }
   </style>
 </head>
 <body>
@@ -146,11 +159,12 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       --space-5: 1.25rem;
       --space-6: 1.5rem;
       --target: 2.75rem;
-      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-      --ease-in: cubic-bezier(0.4, 0, 1, 1);
-      --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+      /* Strong ease-out for UI interactions (Emil / animations.dev) */
+      --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+      --dur-press: 150ms;
       --dur-short: 150ms;
-      --dur-med: 200ms;
+      --dur-med: 180ms;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { overflow-x: clip; }
@@ -216,7 +230,9 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       align-items: center;
       white-space: nowrap;
     }
-    .header-links a:hover { text-decoration: underline; }
+    @media (hover: hover) and (pointer: fine) {
+      .header-links a:hover { text-decoration: underline; }
+    }
     .header-links a:focus-visible {
       outline: 2px solid var(--color-accent);
       outline-offset: 3px;
@@ -339,10 +355,12 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       background: var(--color-control);
       color: var(--color-ink);
       outline: none;
-      transition: border-color var(--dur-short) var(--ease-out), background var(--dur-short) var(--ease-out);
+      transition: border-color var(--dur-short) var(--ease-out), background var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out);
     }
     input[type="text"]::placeholder { color: var(--color-subtle); opacity: 1; }
-    input[type="text"]:hover { background: var(--color-surface); }
+    @media (hover: hover) and (pointer: fine) {
+      input[type="text"]:hover { background: var(--color-surface); }
+    }
     input[type="text"]:focus {
       border-color: var(--color-accent);
       background: var(--color-surface);
@@ -367,9 +385,14 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       cursor: pointer;
       border: 1px solid transparent;
       white-space: nowrap;
-      transition: background var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), transform 120ms var(--ease-out);
+      transition:
+        background var(--dur-short) var(--ease-out),
+        border-color var(--dur-short) var(--ease-out),
+        color var(--dur-short) var(--ease-out),
+        transform var(--dur-press) var(--ease-out),
+        opacity var(--dur-short) var(--ease-out);
     }
-    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
     .btn:focus-visible {
       outline: 2px solid var(--color-accent);
       outline-offset: 2px;
@@ -379,17 +402,19 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       background: var(--color-ink);
       color: var(--color-surface);
     }
-    .btn-primary:hover:not(:disabled) {
-      background: oklch(28% 0.02 255);
-    }
     .btn-secondary {
       background: var(--color-surface);
       color: var(--color-ink);
       border-color: var(--color-border-strong);
     }
-    .btn-secondary:hover:not(:disabled) {
-      background: var(--color-control);
-      border-color: var(--color-muted);
+    @media (hover: hover) and (pointer: fine) {
+      .btn-primary:hover:not(:disabled) {
+        background: oklch(28% 0.02 255);
+      }
+      .btn-secondary:hover:not(:disabled) {
+        background: var(--color-control);
+        border-color: var(--color-muted);
+      }
     }
 
     .auth-result { margin-top: var(--space-4); }
@@ -475,9 +500,27 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       border: 2px solid var(--color-border);
       border-top-color: var(--color-ink);
       border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      animation: spin 0.55s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    /* Occasional panel state enter — opacity + small Y, never scale(0).
+       Keyframes fire reliably when nodes are injected via JS. */
+    .summary-enter {
+      animation: summaryEnter var(--dur-med) var(--ease-out) both;
+    }
+    @keyframes summaryEnter {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .summary-panel-body[aria-busy="true"] {
+      opacity: 0.92;
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -487,6 +530,8 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       }
       .btn:active:not(:disabled) { transform: none; }
       .spinner { animation: none; opacity: 0.75; }
+      .summary-enter { animation: none; transform: none; }
+      details.card-collapsible[open] .collapsible-body { animation: none; }
     }
     .summary-content { display: flex; flex-direction: column; gap: 0.85rem; min-width: 0; }
     .summary-meta { font-size: 0.8rem; color: var(--color-subtle); font-variant-numeric: tabular-nums; }
@@ -496,7 +541,7 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       background: var(--color-control);
       color: var(--color-ink);
       border: 1px solid var(--color-border);
-      border-radius: 999px;
+      border-radius: var(--radius-sm);
       padding: 0.15rem 0.5rem;
       font-size: 0.76rem;
       font-weight: 500;
@@ -587,6 +632,13 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       padding: 0 var(--space-4) var(--space-4);
       border-top: 1px solid var(--color-border);
     }
+    details.card-collapsible[open] .collapsible-body {
+      animation: collapsibleIn var(--dur-short) var(--ease-out);
+    }
+    @keyframes collapsibleIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
     .collapsible-body .subtitle { margin-top: 0.85rem; margin-bottom: 0.7rem; }
     .help-list {
       font-size: 0.86rem;
@@ -636,7 +688,9 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       text-underline-offset: 0.18em;
       white-space: nowrap;
     }
-    .resource-links a:hover { text-decoration: underline; }
+    @media (hover: hover) and (pointer: fine) {
+      .resource-links a:hover { text-decoration: underline; }
+    }
     .resource-links a:focus-visible {
       outline: 2px solid var(--color-accent);
       outline-offset: 3px;
@@ -827,10 +881,11 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
     if (!repository) { alert('Enter a GitHub repository URL or owner/repo value'); return; }
 
     btn.disabled = true;
+    panelBody.setAttribute('aria-busy', 'true');
     panelBody.innerHTML = \`
-      <div class="summary-loading">
+      <div class="summary-loading summary-enter">
         <div class="spinner" aria-hidden="true"></div>
-        <span>Fetching PRs and generating summaries…<br><span style="font-size:0.8rem;color:var(--subtle)">This may take up to 2 minutes.</span></span>
+        <span>Fetching PRs and generating summaries…<br><span style="font-size:0.8rem;color:var(--color-subtle)">This may take up to 2 minutes.</span></span>
       </div>\`;
 
     try {
@@ -847,14 +902,15 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
         : '';
 
       panelBody.innerHTML = \`
-        <div class="summary-content">
+        <div class="summary-content summary-enter">
           <div class="summary-meta">\${escHtml(data.repository)} &middot; top \${data.prsAnalyzed?.length ?? 0} PRs by discussion</div>
           \${prsHtml}
           <div class="summary-text">\${mdToHtml(data.summary)}</div>
         </div>\`;
     } catch (err) {
-      panelBody.innerHTML = \`<div class="summary-error">\${renderErrorHtml(err.message)}</div>\`;
+      panelBody.innerHTML = \`<div class="summary-error summary-enter">\${renderErrorHtml(err.message)}</div>\`;
     } finally {
+      panelBody.removeAttribute('aria-busy');
       btn.disabled = false;
     }
   }
