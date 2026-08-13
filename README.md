@@ -20,98 +20,228 @@ See [User verification for connected accounts](https://docs.scalekit.com/agentki
 
 ---
 
-## Quick start path (Scalekit → GitHub → env → Render)
+## Setup guide (Scalekit ↔ GitHub ↔ Render)
 
-Setup jumps between three products. Follow this order once end-to-end before debugging anything else.
+Setup is confusing because **three products** each own a different piece of OAuth:
+
+| Product | What it owns in this sample |
+|---------|-----------------------------|
+| **Scalekit** | AgentKit app credentials, GitHub **connector**, OAuth **Redirect URI**, user verification |
+| **GitHub** | OAuth App (Client ID/secret used *by Scalekit’s connector*), **Authorization callback URL** |
+| **Render** (or local Node) | Runs this web app, holds env secrets, serves `https://….onrender.com` / `localhost:3000` |
+
+**Critical mental model:** the browser never completes OAuth “with your Render URL.”  
+GitHub redirects to **Scalekit**. Scalekit stores the connected GitHub token. This app only asks Scalekit for tool calls using a **session-bound** identifier.
+
+### Recommended order (do not skip steps)
 
 ```text
-1. Scalekit  → create GitHub connector, copy connection name + Redirect URI
-2. GitHub    → OAuth App callback URL = Scalekit Redirect URI (not your Render URL)
-3. Scalekit  → set User verification mode (required)
-4. Secrets   → fill .env locally and/or Render Environment
-5. Render    → Deploy Blueprint / Deploy to Render button
-6. Browser   → Connect GitHub → paste repo → Summarize PRs
+A. Scalekit  → API credentials + GitHub connector (copy connection name + Redirect URI)
+B. GitHub    → OAuth App callback = Scalekit Redirect URI  ← not Render, not localhost
+C. Scalekit  → User verification mode (required before first Connect GitHub)
+D. LLM       → OpenAI project key or LiteLLM virtual key + model
+E. Env       → local .env and/or Render Environment
+F. Run       → local npm run dev  OR  Deploy to Render
+G. Browser   → Connect GitHub → paste repo → Summarize PRs
 ```
 
-### 1. Scalekit — GitHub connector
+Keep a notepad open while you flip tabs — you will copy values from Scalekit into GitHub, then from Scalekit/OpenAI into Render.
 
-1. Open [app.scalekit.com](https://app.scalekit.com) → **AgentKit → Connectors**
-2. Add a **GitHub** connector
-3. Copy:
-   - **Connection name** → you will set `GITHUB_CONNECTION_NAME`
-   - **Redirect URI** shown on that connector (this is Scalekit’s OAuth callback, not your app URL)
+---
 
-### 2. GitHub — OAuth App callback
+### A. Scalekit — environment credentials
 
-1. In GitHub → **Settings → Developer settings → OAuth Apps** (or your org’s OAuth App)
-2. Set **Authorization callback URL** to the **Scalekit Redirect URI** from step 1
-3. Do **not** point the callback at `https://your-service.onrender.com` or `http://localhost:3000` — GitHub must return to Scalekit, which then completes the connected-account flow
+1. Open [app.scalekit.com](https://app.scalekit.com) and select the environment you will use (dev/demo/prod).
+2. Go to **Developers → API Credentials**.
+3. Copy and save (you will paste these into `.env` / Render later):
+   - **Environment URL** → `SCALEKIT_ENVIRONMENT_URL` (e.g. `https://….scalekit.com`)
+   - **Client ID** → `SCALEKIT_CLIENT_ID`
+   - **Client secret** → `SCALEKIT_CLIENT_SECRET`
 
-### 3. Scalekit — user verification (required)
+Stay in this Scalekit environment for the rest of setup. Mixing credentials from env A with a connector from env B breaks OAuth.
 
-Go to **AgentKit → Settings → User verification** and choose a mode **before** testing Connect GitHub.
+---
 
-| Mode | When to use | After OAuth |
-|------|-------------|-------------|
-| **Scalekit users only** | Development / testing | Scalekit activates the connected account. The app detects `ACTIVE` via polling. |
-| **Custom user verification** | Production | Scalekit redirects to your app’s `/user/verify`. The server calls `verifyConnectedAccountUser`. Polling still works as a fallback. |
+### B. Scalekit — GitHub connector
 
-If you skip this step, the UI often sticks on **Waiting for GitHub authorization**.
+1. In the **same** Scalekit environment: **AgentKit → Connectors**.
+2. Add (or open) a **GitHub** connector.
+3. Copy and save:
+   - **Connection name** (e.g. `github-qkHFhMip`) → `GITHUB_CONNECTION_NAME`  
+     Optional: this repo defaults to `github-qkHFhMip` for the public sampleapps Render demo only. **Your** environment almost always needs its own name.
+   - **Redirect URI** shown on the connector (Scalekit URL — looks like a Scalekit host/path, **not** your Render URL).
 
-Details: [User verification for connected accounts](https://docs.scalekit.com/agentkit/user-verification/).
+Leave this tab open; the Redirect URI is what GitHub must use next.
 
-### 4. Secrets — local `.env`
+Details: [AgentKit connectors](https://docs.scalekit.com/agentkit/connectors/).
+
+---
+
+### C. GitHub — OAuth App (callback into Scalekit)
+
+You are configuring the OAuth App that **Scalekit’s connector** uses to talk to GitHub.
+
+1. GitHub → **Settings → Developer settings → OAuth Apps**  
+   (or your org: **Settings → Developer settings → OAuth Apps**).
+2. Create an OAuth App (or edit the one Scalekit/docs told you to use).
+3. Set **Authorization callback URL** to the **exact Scalekit Redirect URI** from step B.
+4. **Do not** set the callback to:
+   - `https://your-service.onrender.com`
+   - `https://your-service.onrender.com/user/verify`
+   - `http://localhost:3000`
+5. Save. If Scalekit’s connector UI asks for GitHub Client ID / Client secret, paste them from this OAuth App into the connector and save in Scalekit.
+
+**Why:** GitHub only allows one primary callback. That callback must be Scalekit so Scalekit can store the connected account. Your app later receives session activation via user verification / polling — not via GitHub hitting Render directly.
+
+---
+
+### D. Scalekit — user verification (required)
+
+Do this **before** clicking Connect GitHub in the app.
+
+1. Scalekit → **AgentKit → Settings → User verification** (wording may be under AgentKit settings).
+2. Choose a mode:
+
+| Mode | Use when | What happens after GitHub OAuth |
+|------|----------|----------------------------------|
+| **Scalekit users only** | Local dev / demos | Scalekit marks the connection active. This app polls `/api/auth/status` and reloads. |
+| **Custom user verification** | Production-style | Scalekit redirects to **your app** at `/user/verify`. The server calls `verifyConnectedAccountUser`. Polling remains a fallback. |
+
+3. For **Custom user verification**, Scalekit must be able to reach your public app URL (Render). Localhost only works if you use a tunnel Scalekit can call, or stick to **Scalekit users only** for local demos.
+
+If you skip this step, the UI almost always sticks on **Waiting for GitHub authorization** even when GitHub OAuth “succeeded.”
+
+Full reference: [User verification for connected accounts](https://docs.scalekit.com/agentkit/user-verification/).
+
+---
+
+### E. LLM credentials (OpenAI or LiteLLM)
+
+Pick **one** path. Do not mix an OpenAI project key with a LiteLLM base URL unless that key is registered on the proxy.
+
+**OpenAI direct**
+
+| Env | Value |
+|-----|--------|
+| `OPENAI_API_KEY` | Project key (`sk-proj-…`) — [scope permissions](#openai-api-key--scope-permissions-least-privilege) |
+| `OPENAI_BASE_URL` | **Unset / delete** (do not leave a LiteLLM URL) |
+| `OPENAI_MODEL` | e.g. `gpt-5-mini` |
+
+**LiteLLM / OpenAI-compatible proxy**
+
+| Env | Value |
+|-----|--------|
+| `OPENAI_API_KEY` | Proxy **virtual key** (must exist in that proxy’s key table) |
+| `OPENAI_BASE_URL` | Proxy base **including `/v1`** (e.g. `https://llm.example.com/v1`) |
+| `OPENAI_MODEL` | An id from `GET {OPENAI_BASE_URL}/models` for that key (e.g. `claude-haiku-4-5`) |
+
+---
+
+### F. Environment variables — local and/or Render
+
+#### Local
 
 ```bash
 cp .env.example .env
 npm install
+# edit .env with values from steps A–E
+openssl rand -hex 32   # paste into SESSION_SECRET
 ```
 
-| Variable | Where it comes from |
-|----------|---------------------|
-| `SCALEKIT_ENVIRONMENT_URL` | Scalekit → **Developers → API Credentials** |
-| `SCALEKIT_CLIENT_ID` | Same |
-| `SCALEKIT_CLIENT_SECRET` | Same |
-| `GITHUB_CONNECTION_NAME` | Scalekit → **AgentKit → Connectors** (connection name). Optional; defaults to `github-qkHFhMip` for the sampleapps Render demo env |
-| `OPENAI_API_KEY` | OpenAI project key (or OpenAI-compatible proxy token) — [scope permissions](#openai-api-key--scope-permissions-least-privilege) |
-| `OPENAI_MODEL` | Chat model id (default `gpt-5-mini`) |
-| `OPENAI_BASE_URL` | Optional. Empty = OpenAI direct. For LiteLLM use the proxy base including `/v1` (e.g. `https://llm.example.com/v1`) |
-| `SESSION_SECRET` | `openssl rand -hex 32` (Render auto-generates via `render.yaml`) |
-| `PUBLIC_BASE_URL` | Optional. Auto-detected on Render; set only for custom domains / unusual proxies |
-| `PORT` | Optional. Default `3000` |
+#### Render
 
-### 5. Render — deploy
+1. Deploy (step G) **or** open an existing service → **Environment**.
+2. Set the same secrets as local (table below).
+3. Prefer **deleting** unused vars rather than leaving them blank:
+   - Empty `OPENAI_API_KEY=""` does **not** fall back to `LITELLM_API_KEY`.
+   - Empty `OPENAI_BASE_URL` may still be “set”; for OpenAI direct, **delete** `OPENAI_BASE_URL` if it previously pointed at a proxy.
+4. Save → wait for redeploy.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/scalekit-developers/render-ai-agent-deploykit)
+| Variable | Where it comes from | Required |
+|----------|---------------------|----------|
+| `SCALEKIT_ENVIRONMENT_URL` | Scalekit → Developers → API Credentials | Yes |
+| `SCALEKIT_CLIENT_ID` | Same | Yes |
+| `SCALEKIT_CLIENT_SECRET` | Same | Yes |
+| `GITHUB_CONNECTION_NAME` | Scalekit → AgentKit → Connectors (connection name) | Recommended (defaults only for sampleapps demo) |
+| `OPENAI_API_KEY` | OpenAI project key or LiteLLM virtual key | Yes |
+| `OPENAI_MODEL` | OpenAI model id or proxy catalog id | No (default `gpt-5-mini`) |
+| `OPENAI_BASE_URL` | Empty for OpenAI; proxy `…/v1` for LiteLLM | Path-dependent |
+| `SESSION_SECRET` | `openssl rand -hex 32` (Render Blueprint can auto-generate) | Recommended on Render |
+| `PUBLIC_BASE_URL` | Your public app URL | Optional on Render (auto from headers); set if custom domain / bad proxy headers |
+| `PORT` | Usually `3000` | Optional (Render sets PORT) |
 
-Or push this repo and deploy with the included `render.yaml` Blueprint. Set the same secrets as above in the Render **Environment** panel (`SESSION_SECRET` is generated for you).
+Optional aliases (fallbacks only if the `OPENAI_*` var is **unset**, not empty): `LITELLM_API_KEY`, `LITELLM_BASE_URL`, `LITELLM_MODEL`. Prefer a single `OPENAI_*` set to avoid confusion.
 
-After deploy, re-check **User verification** in Scalekit (step 3) if the Connect GitHub flow never becomes active.
+---
 
-### 6. Use the app
+### G. Run the app
 
-1. Open the service URL (local `http://localhost:3000` or your Render URL)
-2. Click **Connect GitHub** — OAuth opens in a **new tab**
-3. Finish GitHub consent; the original tab reloads when the session is connected
-4. Paste a repository URL or `owner/repo` → **Summarize PRs**
-
-Public repos work with any connected account. Private repos require that the connected GitHub user has access.
-
-### Common mistakes
-
-| Symptom | Likely cause |
-|---------|----------------|
-| Stuck on “Waiting for GitHub authorization” | User verification mode not set in Scalekit |
-| OAuth error / redirect mismatch | GitHub OAuth callback is your Render URL instead of Scalekit Redirect URI |
-| `401` on summarize | GitHub never connected for this browser session |
-| Empty / no PRs | Repo has no open PRs, or connected account cannot see the repo |
-| LLM errors / credit messages | Invalid `OPENAI_API_KEY`, wrong `OPENAI_BASE_URL`, or model not allowed on the key/project |
-
-### Run locally
+#### Option 1 — local
 
 ```bash
 npm run dev
+# open http://localhost:3000
 ```
+
+#### Option 2 — Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/scalekit-developers/render-ai-agent-deploykit)
+
+Or connect this repo and deploy with `render.yaml`:
+
+1. Create / open the web service.
+2. Paste env vars from step F (Blueprint may prompt for secrets on first deploy).
+3. Start command is `npm run start:webhook` / `node dist/main.js` (see `package.json`).
+4. After the service is live, if you use **Custom user verification**, confirm Scalekit can reach `https://<your-service>.onrender.com/user/verify`.
+5. Open the Render URL in a browser and continue to step H.
+
+`SESSION_SECRET`: set explicitly, or rely on Blueprint `generateValue` when using `render.yaml`. Dashboard-only deploys that omit it get an ephemeral secret (sessions reset on restart).
+
+---
+
+### H. First successful run in the browser
+
+1. Open the app URL (local or Render).
+2. Click **Connect GitHub** — a **new tab** opens for GitHub OAuth (via Scalekit).
+3. Approve access on GitHub; finish any Scalekit / verification step.
+4. Return to the **original** tab — it should show **GitHub connected** (the page polls every few seconds).
+5. Paste a public `owner/repo` or GitHub URL → **Summarize PRs**.
+6. Wait for the summary panel (LLM can take up to ~2 minutes).
+
+Public repos work with any connected account. Private repos require that the connected GitHub user (and OAuth app / org approval) can access the repo.
+
+---
+
+### Who talks to whom (OAuth)
+
+```text
+Browser                This app (Render/local)         Scalekit              GitHub
+   |                          |                           |                    |
+   |-- Connect GitHub ------->|                           |                    |
+   |                          |-- auth link ------------->|                    |
+   |<-- open new tab ---------|                           |                    |
+   |------------------------------ GitHub OAuth (callback = Scalekit URI) ---->|
+   |                          |                           |<-- code/token -----|
+   |                          |<-- user verify / poll ----|                    |
+   |-- Summarize ------------>|-- GitHub tools via Scalekit ------------------>(API)
+   |                          |-- chat.completions ------> OpenAI or LiteLLM
+```
+
+---
+
+### Common mistakes
+
+| Symptom | Likely cause | Fix |
+|---------|----------------|-----|
+| Stuck on “Waiting for GitHub authorization” | User verification mode not set | Step D |
+| OAuth error / redirect_uri mismatch | GitHub callback is Render or localhost | Step C — must be Scalekit Redirect URI |
+| `GITHUB_CONNECTION_NAME` / connector errors | Wrong env or wrong connection name | Steps A–B — same Scalekit environment |
+| `401` on summarize before LLM | Session never connected | Complete step H; check cookie / `SESSION_SECRET` |
+| `OPENAI_API_KEY environment variable not set` | Blank or missing key on Render | Step F — set key; do not leave empty string |
+| LiteLLM `token_not_found_in_db` | OpenAI key used as proxy token, or wrong proxy | Step E — virtual key for that host |
+| LiteLLM `Invalid model name` | `OPENAI_MODEL` not in proxy catalog (e.g. left at OpenAI default) | `GET /v1/models` and set a listed id |
+| Empty / no PRs | No open PRs, or GitHub account cannot see the repo | Different repo or reconnect with access |
+| LLM quota / credit errors | Billing or key scope | [Key permissions](#openai-api-key--scope-permissions-least-privilege) + provider dashboard |
 
 ---
 

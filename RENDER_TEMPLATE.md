@@ -81,16 +81,18 @@ On [platform.openai.com](https://platform.openai.com):
 
 Full tables and a checklist: see the repo README section **OpenAI API key — scope permissions (least privilege)**.
 
-## Setup order (Scalekit → GitHub → env → use)
+## Setup order (Scalekit ↔ GitHub ↔ Render)
 
-Follow this order once. Flipping between products out of order is the main source of setup confusion.
+Flipping between products out of order is the main source of setup confusion. Full step-by-step (who owns what, OAuth diagram, env table, troubleshooting): **README → Setup guide**.
 
 ```text
-1. Scalekit  → GitHub connector (connection name + Redirect URI)
-2. GitHub    → OAuth App callback = Scalekit Redirect URI (not Render URL)
-3. Scalekit  → User verification mode (required)
-4. Secrets   → Render Environment / local .env
-5. Browser   → Connect GitHub → summarize
+A. Scalekit  → API credentials + GitHub connector (connection name + Redirect URI)
+B. GitHub    → OAuth App callback = Scalekit Redirect URI  ← not Render, not localhost
+C. Scalekit  → User verification mode (required before Connect GitHub)
+D. LLM       → OpenAI key or LiteLLM virtual key + model (+ /v1 base for proxy)
+E. Env       → Render Environment / local .env (delete unused vars; don’t leave blank keys)
+F. Run       → Deploy to Render or npm run dev
+G. Browser   → Connect GitHub → paste repo → Summarize PRs
 ```
 
 ### Scalekit — GitHub connector
