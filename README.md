@@ -73,7 +73,7 @@ npm install
 | `SCALEKIT_CLIENT_ID` | Same |
 | `SCALEKIT_CLIENT_SECRET` | Same |
 | `GITHUB_CONNECTION_NAME` | Scalekit → **AgentKit → Connectors** (connection name). Optional; defaults to `github-qkHFhMip` for the sampleapps Render demo env |
-| `OPENAI_API_KEY` | OpenAI project key (or OpenAI-compatible proxy token) — see [least privilege](#openai-api-key-least-privilege) |
+| `OPENAI_API_KEY` | OpenAI project key (or OpenAI-compatible proxy token) — [scope permissions](#openai-api-key--scope-permissions-least-privilege) |
 | `OPENAI_MODEL` | Chat model id (default `gpt-5-mini`) |
 | `OPENAI_BASE_URL` | Optional. Empty = OpenAI direct. For LiteLLM use the proxy base including `/v1` (e.g. `https://llm.example.com/v1`) |
 | `SESSION_SECRET` | `openssl rand -hex 32` (Render auto-generates via `render.yaml`) |
@@ -141,23 +141,59 @@ Model IDs change over time — confirm the latest names in the [OpenAI model doc
 
 ---
 
-## OpenAI API key (least privilege)
+## OpenAI API key — scope permissions (least privilege)
 
-This sample calls **only** the chat completions API through the OpenAI SDK (`generateSummary` in `src/tasks.ts`). It does **not** need Assistants, Fine-tuning, Batch, Images, Audio, or org administration.
+This sample calls **only** chat completions through the OpenAI SDK (`generateSummary` in `src/tasks.ts`). Scope the key so a leak cannot create assistants, train models, read files, or manage the org.
 
-Recommended setup on [platform.openai.com](https://platform.openai.com):
+### What this app needs
 
-1. Create (or reuse) a **Project** dedicated to this template.
-2. Create a **project secret key** for that project (prefer a project key over a broad user key).
-3. When creating/editing the key, set permissions to **Restricted** (not “All”).
-4. Grant **Write** only where required for model inference / chat completions (endpoint labels vary slightly in the dashboard; if chat fails with a missing-scope error, enable the **Model** / **model.request** capability the UI surfaces).
-5. Leave unused capabilities (Assistants, Fine-tuning, Files, Vector stores, etc.) at **None**.
-6. Optionally restrict the **project’s allowed models** to the ids you set in `OPENAI_MODEL` (for example only `gpt-5-mini` and `gpt-5.6-terra`).
-7. Prefer spend limits / rate limits on the project for demos.
+| Capability | Permission | Why |
+|------------|------------|-----|
+| Model / chat inference (`model.request` or equivalent **Models** write) | **Write** | Single `chat.completions.create` call to summarize PRs |
+| Everything else | **None** | Not used |
 
-If you set `OPENAI_BASE_URL` to a proxy (LiteLLM, Azure, gateway), the key you put in `OPENAI_API_KEY` is the **proxy** credential — apply least privilege on that system instead of (or in addition to) OpenAI’s dashboard.
+### What to leave at None (not required)
 
-Never commit real keys. Use Render Environment secrets or a local `.env` that stays gitignored.
+| Capability | Why you can disable it |
+|------------|------------------------|
+| Assistants | No Assistants API |
+| Fine-tuning | No fine-tunes |
+| Files / Vector stores | No uploads or RAG stores |
+| Batch | No Batch API jobs |
+| Images / Audio / Video | Text-only summaries |
+| Threads / Responses extras beyond chat | Only chat completions path is used |
+| Organization / project admin | Use a project key, not an owner key |
+
+Dashboard labels shift over time. If summarize fails with a missing-scope / permission error, enable **Write** only on the model/inference row the UI surfaces — do not flip the key to “All”.
+
+### How to create a restricted key
+
+On [platform.openai.com](https://platform.openai.com):
+
+1. Create (or reuse) a **Project** dedicated to this template (or demo env).
+2. **API keys → Create** a **project secret key** for that project (prefer project keys over broad user keys).
+3. Set permissions to **Restricted** (not **All**).
+4. Grant **Write** only for model / chat inference (see table above).
+5. Leave every other capability at **None**.
+6. Optionally restrict the **project’s allowed models** to the ids in `OPENAI_MODEL` (for example only `gpt-5-mini` and `gpt-5.6-terra`) so the key cannot call expensive models you did not intend.
+7. Set a **monthly budget / spend limit** and sensible rate limits on the project for demos.
+8. Store the secret only in Render **Environment** or a local gitignored `.env` — never commit it, never paste it into the client.
+
+### Proxies (LiteLLM, Azure, gateway)
+
+If `OPENAI_BASE_URL` points at a proxy, `OPENAI_API_KEY` is the **proxy** credential:
+
+- Create a **virtual key** (or equivalent) with the minimum model allowlist and spend limits the proxy supports.
+- Prefer a key scoped to only the model ids you set in `OPENAI_MODEL`.
+- Do not reuse a full-access OpenAI user key as a proxy token unless that is intentional and documented.
+
+### Quick security checklist
+
+- [ ] Restricted project key (not “All” permissions)
+- [ ] Only model inference write enabled
+- [ ] Model allowlist matches `OPENAI_MODEL`
+- [ ] Project spend limit set
+- [ ] Secret only in server env (Render / `.env`), not in the browser
 
 ---
 

@@ -66,15 +66,20 @@ The app accepts any OpenAI-compatible API:
 | **LiteLLM proxy** | LiteLLM virtual key | proxy URL **with `/v1`** (e.g. `https://llm.example.com/v1`) | any model the proxy serves (e.g. `claude-haiku-4-5`) |
 | **Azure / Ollama / other** | your key or token | your endpoint URL | your model name |
 
-### OpenAI key least privilege
+### OpenAI key least privilege (scope permissions)
 
-This app only calls **chat completions**. On [platform.openai.com](https://platform.openai.com):
+This app only calls **chat completions**. Scope the key so a leak cannot use Assistants, fine-tuning, files, or org admin.
 
-1. Create a dedicated **project** and **project secret key**
+On [platform.openai.com](https://platform.openai.com):
+
+1. Create a dedicated **project** and **project secret key** (not a broad user key)
 2. Set key permissions to **Restricted** (not All)
-3. Enable write access only for model / chat inference
-4. Leave Assistants, Fine-tuning, Files, and other unused APIs at **None**
+3. Grant **Write** only for model / chat inference (`model.request` / Models write)
+4. Leave Assistants, Fine-tuning, Files, Batch, Images, Audio, Vector stores at **None**
 5. Optionally allow only the model ids you set in `OPENAI_MODEL`
+6. Set a project spend limit for demos
+
+Full tables and a checklist: see the repo README section **OpenAI API key — scope permissions (least privilege)**.
 
 ## Setup order (Scalekit → GitHub → env → use)
 
