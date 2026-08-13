@@ -151,6 +151,8 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       --radius: 8px;
       --radius-sm: 6px;
+      /* Action controls stay square — cards/inputs keep soft radii above */
+      --radius-btn: 0;
       --shadow: 0 1px 2px oklch(20% 0.02 255 / 0.05);
       --space-1: 0.25rem;
       --space-2: 0.5rem;
@@ -370,6 +372,13 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       box-shadow: 0 0 0 3px oklch(52% 0.16 255 / 0.2);
     }
 
+    /* Kill native macOS/iOS rounded push-buttons; actions are square. */
+    button,
+    .btn {
+      -webkit-appearance: none;
+      appearance: none;
+      border-radius: var(--radius-btn);
+    }
     .btn {
       display: inline-flex;
       align-items: center;
@@ -378,7 +387,7 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
       min-height: var(--target);
       min-width: var(--target);
       padding: 0.6rem 1.1rem;
-      border-radius: 0;
+      border-radius: var(--radius-btn);
       font-size: 0.9rem;
       font-weight: 600;
       font-family: inherit;
@@ -396,16 +405,19 @@ export function renderHomePage({ connected }: { connected: boolean }): string {
     .btn:focus-visible {
       outline: 2px solid var(--color-accent);
       outline-offset: 2px;
+      border-radius: var(--radius-btn);
     }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-primary {
       background: var(--color-ink);
       color: var(--color-surface);
+      border-radius: var(--radius-btn);
     }
     .btn-secondary {
       background: var(--color-surface);
       color: var(--color-ink);
       border-color: var(--color-border-strong);
+      border-radius: var(--radius-btn);
     }
     @media (hover: hover) and (pointer: fine) {
       .btn-primary:hover:not(:disabled) {
