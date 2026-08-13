@@ -4,10 +4,19 @@ import type { Request, Response } from "express";
 const COOKIE_NAME = "sid";
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
+// Process-local fallback when SESSION_SECRET is unset (e.g. dashboard deploy
+// without render.yaml). Rotates on every restart, so signed cookies are
+// invalidated — fine for a single-instance demo, not for multi-instance prod.
+let ephemeralSecret: string | undefined;
+let warnedMissingSecret = false;
+
 function getSecret(): string {
-  const s = process.env.SESSION_SECRET;
-  if (!s) throw new Error("SESSION_SECRET is required. Generate one with: openssl rand -hex 32");
-  return s;
+  const s = process.env.SESSION_SECRET?.trim();
+  if (s) return s;
+  if (!ephemeralSecret) {
+    ephemeralSecret = randomBytes(32).toString("hex");
+  }
+  return ephemeralSecret;
 }
 
 interface SessionEntry {
@@ -22,7 +31,16 @@ interface SessionEntry {
 const store = new Map<string, SessionEntry>();
 
 export function assertSessionSecretConfigured(): void {
+  const configured = Boolean(process.env.SESSION_SECRET?.trim());
   void getSecret();
+  if (!configured && !warnedMissingSecret) {
+    warnedMissingSecret = true;
+    console.warn(
+      "[session] SESSION_SECRET is not set. Using an ephemeral secret for this process. " +
+        "Sessions reset on restart. Set SESSION_SECRET (openssl rand -hex 32) for stable cookies, " +
+        "or deploy via render.yaml which auto-generates it.",
+    );
+  }
 }
 
 function sign(sessionId: string): string {
